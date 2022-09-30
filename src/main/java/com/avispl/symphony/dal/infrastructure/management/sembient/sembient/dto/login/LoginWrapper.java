@@ -1,13 +1,16 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.login;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * Login wrapper class
+ * LoginWrapper class
  *
  * @author Kevin / Symphony Dev Team<br>
- * Created on 8/24/2022
+ * Created on 9/30/2022
  * @since 1.0.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)

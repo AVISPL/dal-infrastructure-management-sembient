@@ -1,8 +1,17 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.customer;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 
-
+/**
+ * CustomerDefinedTagWrapper class
+ *
+ * @author Kevin / Symphony Dev Team<br>
+ * Created on 9/30/2022
+ * @since 1.0.0
+ */
 public class CustomerDefinedTagWrapper {
 	private String statusCode;
 	@JsonAlias("body")
