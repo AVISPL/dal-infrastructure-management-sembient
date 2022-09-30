@@ -1,9 +1,19 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.region;
 
 import java.util.Arrays;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+/**
+ * RegionResponse class
+ *
+ * @author Kevin / Symphony Dev Team<br>
+ * Created on 9/30/2022
+ * @since 1.0.0
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RegionResponse {
 	private String regionName;

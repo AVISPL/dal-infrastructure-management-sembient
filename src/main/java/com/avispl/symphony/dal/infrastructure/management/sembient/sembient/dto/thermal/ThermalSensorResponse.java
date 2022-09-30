@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.thermal;
 
 import java.util.Arrays;
@@ -5,10 +8,16 @@ import java.util.Arrays;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+/**
+ * ThermalSensorResponse class
+ *
+ * @author Kevin / Symphony Dev Team<br>
+ * Created on 9/30/2022
+ * @since 1.0.0
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ThermalSensorResponse {
 	private String sensorName;
-
 	private String regionName;
 	@JsonAlias("data")
 	private ThermalData[] thermalData;

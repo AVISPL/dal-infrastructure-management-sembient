@@ -1,5 +1,15 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.thermal;
 
+/**
+ * ThermalData class
+ *
+ * @author Kevin / Symphony Dev Team<br>
+ * Created on 9/30/2022
+ * @since 1.0.0
+ */
 public class ThermalData {
 	private String temperature;
 	private String humidity;
