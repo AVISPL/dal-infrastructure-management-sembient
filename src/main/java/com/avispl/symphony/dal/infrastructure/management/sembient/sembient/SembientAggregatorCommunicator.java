@@ -9,7 +9,6 @@ import java.net.SocketTimeoutException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -110,31 +109,28 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				} catch (InterruptedException e) {
 					// Ignore for now
 				}
-				// Wait for getMultipleStatistics() call login first, then worker thread will start colling device (region) information.
-				if (loginResponse == null) {
-					continue mainloop;
-				}
 				if (!inProgress) {
 					break mainloop;
 				}
-
+				// Wait for getMultipleStatistics() to collect building & floor information first
+				if (cachedBuildings.size() == 0) {
+					continue mainloop;
+				}
 				// next line will determine whether Sembient monitoring was paused
 				updateAggregatorStatus();
 				if (devicePaused) {
 					continue mainloop;
 				}
-
 				try {
 					if (logger.isDebugEnabled()) {
-						logger.debug("Fetching devices list");
+						logger.debug("Fetching region list");
 					}
 					fetchRegionsList();
-
 					if (logger.isDebugEnabled()) {
-						logger.debug("Fetched region metadata list: " + aggregatedDevices);
+						logger.debug("Fetched region list: " + aggregatedDevices);
 					}
 				} catch (Exception e) {
-					logger.error("Error occurred during region metadata list retrieval: " + e.getMessage() + " with cause: " + e.getCause().getMessage(), e);
+					logger.error("Error occurred during region list retrieval: " + e.getMessage() + " with cause: " + e.getCause().getMessage(), e);
 				}
 				if (!inProgress) {
 					break mainloop;
@@ -143,7 +139,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				if (aggregatedDevicesCount == 0) {
 					continue mainloop;
 				}
-
 				while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
 					try {
 						TimeUnit.MILLISECONDS.sleep(1000);
@@ -228,6 +223,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private volatile boolean devicePaused = true;
 
 	/**
+	 * Indicates whether a building and floor information(renew every {@link SembientAggregatorCommunicator#pollingInterval} minutes) is latest or not
+	 */
+	private volatile boolean latestBuildingAndFloorData = false;
+
+	/**
 	 * Aggregator inactivity timeout. If the {@link SembientAggregatorCommunicator#retrieveMultipleStatistics()}  method is not
 	 * called during this period of time - device is considered to be paused, thus the Cloud API
 	 * is not supposed to be called
@@ -281,7 +281,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	/**
 	 * Device metadata retrieval timeout. The general devices list is retrieved once during this time period.
 	 */
-	private long deviceMetaDataRetrievalTimeout = 60 * 1000 / 2;
+	private long deviceMetaDataRetrievalTimeout = 60 * 1000;
 
 	/**
 	 * Time period within which the device metadata (basic devices' information) cannot be refreshed.
@@ -561,11 +561,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				String yesterdayDate = formatter.format(yesterday);
 				aggregatedDeviceHourMap.put(deviceId, (String) controllableProperty.getValue());
 				populateOccupancyData(statFromCached, controlFromCached, currentDate, yesterdayDate, deviceId, buildingName, floorName, regionName);
-				aggregatedDevices.get(deviceId).setProperties(statFromCached);
-				aggregatedDevices.get(deviceId).setControllableProperties(controlFromCached);
 			} else if (groupName.equals(SembientAggregatorConstant.REGION_TAG)) {
 				switch (propertyName) {
 					case SembientAggregatorConstant.NEW_TAG:
+						String newTagValue = (String) controllableProperty.getValue();
+						if (StringUtils.isNullOrEmpty(newTagValue)) {
+							throw new ResourceNotReachableException("Cannot create new region tag with value is empty or null");
+						}
 						lastNewTag.put(deviceId, (String) controllableProperty.getValue());
 						statFromCached.put(SembientAggregatorConstant.REGION_TAG_NEW_TAG, (String) controllableProperty.getValue());
 						for (AdvancedControllableProperty control : controlFromCached) {
@@ -575,8 +577,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								break;
 							}
 						}
-						aggregatedDevices.get(deviceId).setProperties(statFromCached);
-						aggregatedDevices.get(deviceId).setControllableProperties(controlFromCached);
 						break;
 					case SembientAggregatorConstant.TAG:
 						aggregatedDeviceTagMap.put(deviceId, (String) controllableProperty.getValue());
@@ -588,16 +588,14 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								break;
 							}
 						}
-						aggregatedDevices.get(deviceId).setProperties(statFromCached);
-						aggregatedDevices.get(deviceId).setControllableProperties(controlFromCached);
 						break;
 					case SembientAggregatorConstant.LABEL_CREATE:
 						String newTag = lastNewTag.get(deviceId);
 						if (StringUtils.isNullOrEmpty(newTag)) {
 							throw new ResourceNotReachableException("NewTag value cannot be empty.");
 						}
-						String createRequest = "/v3.1/space/tags/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-								+ floorName + "?regionName=" + regionName + "&regionTags=" + newTag;
+						String createRequest = SembientAggregatorConstant.COMMAND_SPACE_TAGS + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+								+ floorName + SembientAggregatorConstant.PARAM_REGION_NAME + regionName + SembientAggregatorConstant.PARAM_REGION_TAGS + newTag;
 						RegionTagWrapperControl createRegionTagWrapperControl = this.doPutWithRetry(createRequest, RegionTagWrapperControl.class);
 						if (createRegionTagWrapperControl != null) {
 							if (!SembientAggregatorConstant.STATUS_CODE_200.equals(createRegionTagWrapperControl.getStatusCode())) {
@@ -614,8 +612,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
 							populateRegionTag(statFromCached, controlFromCached, deviceId);
-							aggregatedDevices.get(deviceId).setProperties(statFromCached);
-							aggregatedDevices.get(deviceId).setControllableProperties(controlFromCached);
 						} else {
 							throw new CommandFailureException("Fail to create region with value is: " + controllableProperty.getValue()
 									, createRequest, null);
@@ -626,8 +622,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						if (StringUtils.isNullOrEmpty(valueToBeDelete)) {
 							throw new ResourceNotReachableException("Tag dropdowns value cannot be empty.");
 						}
-						String deleteRequest = "/v3.1/space/tags/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-								+ floorName + "?regionName=" + regionName + "&regionTags=" + valueToBeDelete;
+						String deleteRequest = SembientAggregatorConstant.COMMAND_SPACE_TAGS + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+								+ floorName + SembientAggregatorConstant.PARAM_REGION_NAME + regionName + SembientAggregatorConstant.PARAM_REGION_TAGS + valueToBeDelete;
 						try {
 							this.doDeleteWithRetry(deleteRequest);
 
@@ -640,8 +636,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
 							populateRegionTag(statFromCached, controlFromCached, deviceId);
-							aggregatedDevices.get(deviceId).setProperties(statFromCached);
-							aggregatedDevices.get(deviceId).setControllableProperties(controlFromCached);
 						} catch (Exception e) {
 							throw new CommandFailureException("Fail to delete region with value is: " + valueToBeDelete
 									, deleteRequest, null, e);
@@ -653,6 +647,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			} else {
 				throw new IllegalStateException(String.format("Controlling group %s is not supported.", controllableProperty.getProperty()));
 			}
+			deviceToBeControlled.setProperties(statFromCached);
+			deviceToBeControlled.setControllableProperties(controlFromCached);
+			aggregatedDevices.put(deviceId, deviceToBeControlled);
 		} finally {
 			reentrantLock.unlock();
 		}
@@ -682,9 +679,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		try {
 			// Login to get the token if token has expired.
 			sembientLogin();
-			if (cachedBuildings.size() != 0) {
-//				BuildingResponse[] buildingResponses = cachedBuildings();
-				// filter this list of building response
+			// Fetch building
+			fetchBuildings();
+			// Put NextPollingInterval properties to stats map
+			DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
+			obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
+			stats.put(SembientAggregatorConstant.NEXT_POLLING_INTERVAL, obj.format(validDeviceMetaDataRetrievalPeriodTimestamp));
+			if (cachedBuildings != null && cachedBuildings.size() != 0) {
 				BuildingResponse buildingResponse = null;
 				if (buildingFilter != null) {
 					for (BuildingResponse building : cachedBuildings) {
@@ -703,7 +704,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				int index = 0;
 				for (BuildingResponse building : cachedBuildings) {
-					stats.put(String.format("Buildings#Building%02d", (index + 1)), building.getBuildingName());
+					stats.put(String.format(SembientAggregatorConstant.BUILDING_PROPERTY, (index + 1)), building.getBuildingName());
 					index++;
 				}
 				if (buildingResponse != null) {
@@ -719,7 +720,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							for (String floorName : floorNames) {
 								if (filter.equals(floorName)) {
 									i++;
-									String floorIndex = String.format(SembientAggregatorConstant.HASH + "Floor%02d", (i));
+									String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, (i));
 									stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
 									break;
 								}
@@ -729,7 +730,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						int i = 0;
 						for (String floorName : floorNames) {
 							i++;
-							String floorIndex = String.format(SembientAggregatorConstant.HASH + "Floor%02d", (i));
+							String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, (i));
 							stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
 							break;
 						}
@@ -859,11 +860,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			Map<String, String> headers = new HashMap<>();
 			headers.put(SembientAggregatorConstant.ACCEPT_HEADER, SembientAggregatorConstant.APPLICATION_JSON);
 			headers.put(SembientAggregatorConstant.CONTENT_TYPE_HEADER, SembientAggregatorConstant.APPLICATION_JSON);
-			String valueToEncode = this.getLogin() + ":" + this.getPassword();
+			String valueToEncode = this.getLogin() + SembientAggregatorConstant.COLON + this.getPassword();
 			String encodeBasicScheme = SembientAggregatorConstant.BASIC_AUTH_SCHEME + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
 			headers.put(SembientAggregatorConstant.AUTHORIZATION, encodeBasicScheme);
 			try {
-				String loginRawResponse = this.doPost("/v3.1/users/login", headers, SembientAggregatorConstant.EMPTY);
+				String loginRawResponse = this.doPost(SembientAggregatorConstant.COMMAND_USERS_LOGIN, headers, SembientAggregatorConstant.EMPTY);
 				LoginWrapper loginWrapper = new ObjectMapper().readValue(loginRawResponse, LoginWrapper.class);
 				loginResponse = loginWrapper.getLoginResponse();
 				loginResponse.setExpirationTime(currentTime + loginResponse.getExp() * 1000L);
@@ -877,27 +878,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	/**
 	 * Fetch all buildings
 	 *
-	 * @return Array of buildings
 	 * @throws Exception if fail to get array of building
 	 */
-	private BuildingResponse[] fetchBuildings() throws Exception {
-		BuildingWrapper buildingWrapper = this.doGetWithRetry("/v3.1/space/buildings/" + loginResponse.getCustomerId(), BuildingWrapper.class);
-		if (buildingWrapper != null) {
-			return buildingWrapper.getBuildingResponse();
-		}
-		return null;
-	}
-
-	/**
-	 * Fetch the latest list of buildings, floors and regions
-	 *
-	 * @throws Exception if fail to fetch buildings, floors and regions.
-	 */
-	private void fetchRegionsList() throws Exception {
+	private void fetchBuildings() throws Exception {
 		long currentTimestamp = System.currentTimeMillis();
-		if (aggregatedDevices.size() > 0 && validDeviceMetaDataRetrievalPeriodTimestamp > currentTimestamp) {
+		if (cachedBuildings.size() > 0 && validDeviceMetaDataRetrievalPeriodTimestamp > currentTimestamp) {
 			if (logger.isDebugEnabled()) {
-				logger.debug(String.format("General regions metadata retrieval is in cooldown. %s seconds left",
+				logger.debug(String.format("Building and floor retrieval is in cooldown. %s seconds left",
 						(validDeviceMetaDataRetrievalPeriodTimestamp - currentTimestamp) / 1000));
 			}
 			return;
@@ -915,28 +902,46 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		} else {
 			validDeviceMetaDataRetrievalPeriodTimestamp = currentTimestamp + deviceMetaDataRetrievalTimeout;
 		}
-		BuildingResponse[] fetchBuildings = fetchBuildings();
+		latestBuildingAndFloorData = true;
+		BuildingWrapper buildingWrapper = this.doGetWithRetry(SembientAggregatorConstant.COMMAND_SPACE_BUILDINGS + loginResponse.getCustomerId(), BuildingWrapper.class);
+		if (buildingWrapper != null) {
+			cachedBuildings.clear();
+			cachedBuildings.addAll(Arrays.asList(buildingWrapper.getBuildingResponse()));
+		}
+	}
 
-		if (fetchBuildings != null) {
-			// Populate to cachedBuildings that we would use later on in getMultipleStatistics
-			cachedBuildings.addAll(Arrays.asList(fetchBuildings));
-			// Filter building:
-			if (buildingFilter == null) {
-				String buildingID = fetchBuildings[0].getBuildingID();
-				String[] floorNames = fetchBuildings[0].getFloors();
-				// Filter by floors
-				filterByFloors(buildingID, floorNames);
-			} else {
-				for (BuildingResponse response : fetchBuildings) {
-					if (response.getBuildingName().equals(buildingFilter)) {
-						String buildingID = response.getBuildingID();
-						String[] floorNames = response.getFloors();
-						filterByFloors(buildingID, floorNames);
-						break;
-					}
+	/**
+	 * Fetch the latest list of buildings, floors and regions
+	 *
+	 * @throws Exception if fail to fetch buildings, floors and regions.
+	 */
+	private void fetchRegionsList() throws Exception {
+		long currentTimestamp = System.currentTimeMillis();
+		if (!latestBuildingAndFloorData) {
+			if (logger.isDebugEnabled()) {
+				logger.debug(String.format("Region meta data retrieval is in cooldown. %s seconds left",
+						(validDeviceMetaDataRetrievalPeriodTimestamp - currentTimestamp) / 1000));
+			}
+			return;
+		}
+		// Filter building:
+		if (buildingFilter == null && cachedBuildings.stream().findFirst().isPresent()) {
+			String buildingID = cachedBuildings.stream().findFirst().get().getBuildingID();
+			String[] floorNames = cachedBuildings.stream().findFirst().get().getFloors();
+			// Filter by floors
+			filterByFloors(buildingID, floorNames);
+		} else {
+			for (BuildingResponse response : cachedBuildings) {
+				if (response.getBuildingName().equals(buildingFilter)) {
+					String buildingID = response.getBuildingID();
+					String[] floorNames = response.getFloors();
+					filterByFloors(buildingID, floorNames);
+					break;
 				}
 			}
 		}
+		// Notify worker thread that it's a valid time to start fetching details device information.
+		latestBuildingAndFloorData = false;
 		nextDevicesCollectionIterationTimestamp = System.currentTimeMillis();
 	}
 
@@ -991,9 +996,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		String request;
 		if (regionType != null) {
 			request =
-					"/v3.1/space/regions/" + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH + floorName + "?regionType=" + regionType;
+					SembientAggregatorConstant.COMMAND_SPACE_REGIONS + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH + floorName
+							+ SembientAggregatorConstant.PARAM_REGION_TYPE + regionType;
 		} else {
-			request = "/v3.1/space/regions/" + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH + floorName;
+			request = SembientAggregatorConstant.COMMAND_SPACE_REGIONS + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH + floorName;
 		}
 		RegionWrapper regionWrapper = this.doGetWithRetry(request, RegionWrapper.class);
 		if (regionWrapper != null) {
@@ -1034,8 +1040,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		populateIAQData(properties, currentDate, yesterdayDate, buildingName, floorName, regionName);
 		// Retrieve region tags
 		populateRegionTag(properties, controls, deviceId);
-		aggregatedDevices.get(aggregatedDevice.getDeviceId()).setProperties(properties);
-		aggregatedDevices.get(aggregatedDevice.getDeviceId()).setControllableProperties(controls);
+		aggregatedDevice.setProperties(properties);
+		aggregatedDevice.setControllableProperties(controls);
+		aggregatedDevices.put(aggregatedDevice.getDeviceId(), aggregatedDevice);
 	}
 
 	/**
@@ -1054,7 +1061,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		String floorName = regionDetails[1];
 		String regionName = regionDetails[2];
 		String request =
-				"/v3.1/space/tags/" + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH + floorName + "?regionName=" + regionName;
+				SembientAggregatorConstant.COMMAND_SPACE_TAGS + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH + floorName
+						+ SembientAggregatorConstant.PARAM_REGION_NAME
+						+ regionName;
 		RegionTagWrapperMonitor regionTagWrapperControl = this.doGetWithRetry(request, RegionTagWrapperMonitor.class);
 		// Get getRegionResponse by first index because it only has 1 element.
 		if (regionTagWrapperControl != null) {
@@ -1094,17 +1103,18 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
 	private void populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingName, String floorName, String regionName) throws Exception {
-		AirQualityWrapper airQualityWrapper = doGetWithRetry("/v3.1/iaq/timeseries/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-				+ floorName + SembientAggregatorConstant.SLASH + currentDate, AirQualityWrapper.class);
-
+		AirQualityWrapper airQualityWrapper = doGetWithRetry(
+				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+						+ floorName + SembientAggregatorConstant.SLASH + currentDate, AirQualityWrapper.class);
 		if (airQualityWrapper != null) {
 			AirQualitySensorResponse[] airQualitySensorResponses = new AirQualitySensorResponse[0];
 			if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
 				airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
 			}
 			if (airQualitySensorResponses.length == 0) {
-				airQualityWrapper = doGetWithRetry("/v3.1/iaq/timeseries/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-						+ floorName + SembientAggregatorConstant.SLASH + yesterdayDate, AirQualityWrapper.class);
+				airQualityWrapper = doGetWithRetry(
+						SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+								+ floorName + SembientAggregatorConstant.SLASH + yesterdayDate, AirQualityWrapper.class);
 				if (airQualityWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
 						airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
@@ -1125,8 +1135,23 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					sensorAndIAQMap.put(airQualitySensorResponse.getSensorName(), airQualitySensorResponse.getAirQualityData());
 				}
 			}
+			boolean isPopulated = false;
 			for (Map.Entry<String, AirQualityData[]> entry : sensorAndIAQMap.entrySet()
 			) {
+				// Remove previous properties
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.CO2_VALUE);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.TVOCVALUE_MICROGRAM);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.PM_25_VALUE_MICROMET);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.LAST_UPDATE);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.RECENT_DATA);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.MESSAGE);
+				//
 				int lastIndex = entry.getValue().length - 1;
 				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
 						+ SembientAggregatorConstant.CO2_VALUE, entry.getValue()[lastIndex].getCo2());
@@ -1134,21 +1159,24 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						+ SembientAggregatorConstant.TVOCVALUE_MICROGRAM, entry.getValue()[lastIndex].getTvoc());
 				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
 						+ SembientAggregatorConstant.PM_25_VALUE_MICROMET, entry.getValue()[lastIndex].getPm25());
-				DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
-				obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
-				// we create instance of the Date and pass milliseconds to the constructor
-				Date res = new Date(entry.getValue()[lastIndex].getTimestamp() * 1000);
-				long resInMs = res.getTime();
-				long currentTimeMs = System.currentTimeMillis();
+				if (!isPopulated) {
+					DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
+					obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
+					// Convert s to ms
+					Date res = new Date(entry.getValue()[lastIndex].getTimestamp() * 1000);
+					long resInMs = res.getTime();
+					long currentTimeMs = System.currentTimeMillis();
 
-				long dif = currentTimeMs - resInMs;
-				long hourInMs = 3600 * 1000;
-				boolean isRecentData = (dif) > hourInMs;
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.RECENT_DATA, String.valueOf(isRecentData));
-				// now we format the res by using SimpleDateFormat
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.LAST_UPDATE, obj.format(res));
+					long dif = currentTimeMs - resInMs;
+					long hourInMs = 3600 * 1000;
+					boolean isRecentData = (dif) < hourInMs;
+					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+							+ SembientAggregatorConstant.RECENT_DATA, String.valueOf(isRecentData));
+					// now we format the res by using SimpleDateFormat
+					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+							+ SembientAggregatorConstant.LAST_UPDATE, obj.format(res));
+					isPopulated = true;
+				}
 			}
 		} else {
 			populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
@@ -1170,8 +1198,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link ThermalWrapper}
 	 */
 	private void populateThermalData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingName, String floorName, String regionName) throws Exception {
-		ThermalWrapper thermalWrapper = doGetWithRetry("/v3.1/thermal/timeseries/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-				+ floorName + SembientAggregatorConstant.SLASH + currentDate, ThermalWrapper.class);
+		ThermalWrapper thermalWrapper = doGetWithRetry(
+				SembientAggregatorConstant.COMMAND_THERMAL_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+						+ floorName + SembientAggregatorConstant.SLASH + currentDate, ThermalWrapper.class);
 		if (thermalWrapper != null) {
 			ThermalSensorResponse[] thermalSensorResponse = new ThermalSensorResponse[0];
 			if (SembientAggregatorConstant.STATUS_CODE_200.equals(thermalWrapper.getStatusCode()) && thermalWrapper.getThermalSensorWrappers() != null) {
@@ -1179,8 +1208,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			if (thermalSensorResponse.length == 0) {
 				// Retry with yesterday data
-				thermalWrapper = doGetWithRetry("/v3.1/thermal/timeseries/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-						+ floorName + SembientAggregatorConstant.SLASH + yesterdayDate, ThermalWrapper.class);
+				thermalWrapper = doGetWithRetry(
+						SembientAggregatorConstant.COMMAND_THERMAL_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+								+ floorName + SembientAggregatorConstant.SLASH + yesterdayDate, ThermalWrapper.class);
 				if (thermalWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(thermalWrapper.getStatusCode()) && thermalWrapper.getThermalSensorWrappers() != null) {
 						thermalSensorResponse = thermalWrapper.getThermalSensorWrappers().getThermalSensorResponses();
@@ -1194,6 +1224,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					return;
 				}
 			}
+
 			Map<String, ThermalData[]> sensorAndThermalMap = new HashMap<>();
 			for (ThermalSensorResponse sensorResponse : thermalSensorResponse) {
 				String[] regions = sensorResponse.getRegionName().split(SembientAggregatorConstant.COMMA);
@@ -1201,24 +1232,51 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					sensorAndThermalMap.put(sensorResponse.getSensorName(), sensorResponse.getThermalData());
 				}
 			}
+			boolean isPopulated = false;
 			for (Map.Entry<String, ThermalData[]> entry : sensorAndThermalMap.entrySet()
 			) {
+				// Remove previous properties
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.TEMPERATURE_F);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.LAST_UPDATE);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.RECENT_DATA);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.HUMIDITY);
+				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.MESSAGE);
+				//
 				int lastIndex = entry.getValue().length - 1;
 				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
 						+ SembientAggregatorConstant.TEMPERATURE_F, entry.getValue()[lastIndex].getTemperature());
 				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
 						+ SembientAggregatorConstant.HUMIDITY, entry.getValue()[lastIndex].getHumidity());
-				DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
-				obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
-				Date res = new Date(entry.getValue()[lastIndex].getTimestamp() * 1000);
-				int hour = LocalDateTime.now().getHour();
-				boolean isRecentData = (hour - res.getHours()) > 1;
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
-						+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.RECENT_DATA, String.valueOf(isRecentData));
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
-						+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.LAST_UPDATE, obj.format(res));
+				if (!isPopulated) {
+					DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
+					obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
+					// Convert s to ms
+					Date res = new Date(entry.getValue()[lastIndex].getTimestamp() * 1000);
+					long resInMs = res.getTime();
+					long currentTimeMs = System.currentTimeMillis();
+
+					long dif = currentTimeMs - resInMs;
+					long hourInMs = 3600 * 1000;
+					boolean isRecentData = (dif) < hourInMs;
+					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
+							+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.RECENT_DATA, String.valueOf(isRecentData));
+					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
+							+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.LAST_UPDATE, obj.format(res));
+					isPopulated = true;
+				}
 			}
 		} else {
+			for (Entry<String, String> entry: properties.entrySet()) {
+				if (entry.getKey().contains(SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
+						+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.LAST_UPDATE)) {
+					return;
+				}
+			}
 			populateNoData(properties, SembientAggregatorConstant.THERMAL);
 		}
 	}
@@ -1258,7 +1316,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			throws Exception {
 		// Retrieve data from today
 		String dateToBeDisplayed = currentDate;
-		OccupancyWrapper occupancyWrapper = this.doGetWithRetry("/v3.1/occupancy/timeseries/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH
+		OccupancyWrapper occupancyWrapper = this.doGetWithRetry(SembientAggregatorConstant.COMMAND_OCCUPANCY_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH
 				+ buildingName + SembientAggregatorConstant.SLASH
 				+ floorName + SembientAggregatorConstant.SLASH + currentDate, OccupancyWrapper.class);
 		if (occupancyWrapper != null) {
@@ -1268,8 +1326,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			if (occupancyRegionResponses.length == 0) {
 				// Retry one more time with yesterday data.
-				occupancyWrapper = this.doGetWithRetry("/v3.1/occupancy/timeseries/" + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-						+ floorName + SembientAggregatorConstant.SLASH + yesterdayDate, OccupancyWrapper.class);
+				occupancyWrapper = this.doGetWithRetry(
+						SembientAggregatorConstant.COMMAND_OCCUPANCY_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
+								+ floorName + SembientAggregatorConstant.SLASH + yesterdayDate, OccupancyWrapper.class);
 				if (occupancyWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(occupancyWrapper.getStatusCode()) && occupancyWrapper.getOccupancyRegionWrappers() != null) {
 						occupancyRegionResponses = occupancyWrapper.getOccupancyRegionWrappers().getOccupancyRegionResponses();
@@ -1284,6 +1343,17 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					return;
 				}
 			}
+			// Remove previous properties
+			properties.remove(SembientAggregatorConstant.REGION_TAG_CREATE);
+			properties.remove(SembientAggregatorConstant.PROPERTY_DELETE);
+			properties.remove(SembientAggregatorConstant.REGION_TAG_NEW_TAG);
+			properties.remove(SembientAggregatorConstant.PROPERTY_TAG);
+			properties.remove(SembientAggregatorConstant.PROPERTY_LAST_UPDATE);
+			properties.remove(SembientAggregatorConstant.REGION + SembientAggregatorConstant.HASH + SembientAggregatorConstant.MESSAGE);
+			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_CREATE));
+			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
+			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
+			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
 			OccupancyData[] occupancyData = new OccupancyData[0];
 			for (OccupancyRegionResponse res : occupancyRegionResponses) {
 				if (regionName.equals(res.getRegionName())) {
@@ -1308,18 +1378,26 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			List<String> values = new ArrayList<>();
 			values.add(SembientAggregatorConstant.DEFAULT_WORK_HOUR);
-			values.add("9");
-			values.add("10");
-			values.add("11");
-			values.add("12");
-			values.add("13");
-			values.add("14");
-			values.add("15");
-			values.add("16");
-			values.add("17");
+			values.add(SembientAggregatorConstant.WORK_HOUR_9);
+			values.add(SembientAggregatorConstant.WORK_HOUR_10);
+			values.add(SembientAggregatorConstant.WORK_HOUR_11);
+			values.add(SembientAggregatorConstant.WORK_HOUR_12);
+			values.add(SembientAggregatorConstant.WORK_HOUR_13);
+			values.add(SembientAggregatorConstant.WORK_HOUR_14);
+			values.add(SembientAggregatorConstant.WORK_HOUR_15);
+			values.add(SembientAggregatorConstant.WORK_HOUR_16);
+			values.add(SembientAggregatorConstant.WORK_HOUR_17);
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_HOUR, values, hourValue));
 			properties.put(SembientAggregatorConstant.PROPERTY_CURRENT_DATE, dateToBeDisplayed);
+			DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
+			obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
+			// Convert s to ms
+			Date res = new Date(System.currentTimeMillis());
+			properties.put(SembientAggregatorConstant.PROPERTY_LAST_UPDATE, obj.format(res));
 		} else {
+			if (properties.containsKey(SembientAggregatorConstant.REGION_TAG_CREATE)) {
+				return;
+			}
 			properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
 		}
 	}
@@ -1379,7 +1457,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int retryAttempts = 0;
 		Exception lastError = null;
 
-		while (retryAttempts++ < 10 && serviceRunning) {
+		while (retryAttempts++ < 4 && serviceRunning) {
 			try {
 				return doPut(url, null, clazz);
 			} catch (CommandFailureException e) {
@@ -1398,10 +1476,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(200);
+			TimeUnit.MILLISECONDS.sleep(500);
 		}
 
-		if (retryAttempts == 10 && serviceRunning) {
+		if (retryAttempts == 4 && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
@@ -1420,7 +1498,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int retryAttempts = 0;
 		Exception lastError = null;
 
-		while (retryAttempts++ < 10 && serviceRunning) {
+		while (retryAttempts++ < 4 && serviceRunning) {
 			try {
 				this.doDelete(url);
 			} catch (CommandFailureException e) {
@@ -1439,10 +1517,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(200);
+			TimeUnit.MILLISECONDS.sleep(500);
 		}
 
-		if (retryAttempts == 10 && serviceRunning) {
+		if (retryAttempts == 4 && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
@@ -1471,7 +1549,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (StringUtils.isNotNullOrEmpty(regionNameFilter) && !isContinue) {
 				continue;
 			}
-
 			AggregatedDevice aggregatedDevice = new AggregatedDevice();
 			// Response doesn't contain any id, in order to make device id unique we create a combination of building, floor and region --
 			// For instance: BuildingA-Floor1-Region1
@@ -1480,15 +1557,22 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			aggregatedDevice.setDeviceModel(region.getRegionType());
 			aggregatedDevice.setDeviceOnline(true);
 			aggregatedDevice.setDeviceName(region.getRegionName());
-			Map<String, String> properties = new HashMap<>();
 			if (region.getSensors() != null) {
 				for (int i = 0; i < region.getSensors().length; i++) {
 					aggregatedDeviceSensor.put(aggregatedDevice.getDeviceId(), region.getSensors()[i]);
 				}
 			}
 			// occupancy, thermal, iaq data will be populated later on.
-			aggregatedDevice.setProperties(properties);
-			aggregatedDevice.setControllableProperties(new ArrayList<>());
+			if (aggregatedDevices.get(aggregatedDevice.getDeviceId()) != null) {
+				Map<String, String> propertiesFromCached = aggregatedDevices.get(aggregatedDevice.getDeviceId()).getProperties();
+				List<AdvancedControllableProperty> controlsFromCached = aggregatedDevices.get(aggregatedDevice.getDeviceId()).getControllableProperties();
+				aggregatedDevice.setProperties(propertiesFromCached);
+				aggregatedDevice.setControllableProperties(controlsFromCached);
+			} else {
+				Map<String, String> properties = new HashMap<>();
+				aggregatedDevice.setProperties(properties);
+				aggregatedDevice.setControllableProperties(new ArrayList<>());
+			}
 			aggregatedDevices.put(aggregatedDevice.getDeviceId(), aggregatedDevice);
 		}
 	}
@@ -1528,7 +1612,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		return new AdvancedControllableProperty(name, new Date(), button, SembientAggregatorConstant.EMPTY);
 	}
 
-
 	/***
 	 * Create instance of AdvancedControllableProperty type dropdown
 	 *
@@ -1543,7 +1626,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		AdvancedControllableProperty.DropDown dropDown = new AdvancedControllableProperty.DropDown();
 		dropDown.setOptions(values.toArray(new String[0]));
 		dropDown.setLabels(values.toArray(new String[0]));
-
 		return new AdvancedControllableProperty(name, new Date(), dropDown, initialValue);
 	}
 }

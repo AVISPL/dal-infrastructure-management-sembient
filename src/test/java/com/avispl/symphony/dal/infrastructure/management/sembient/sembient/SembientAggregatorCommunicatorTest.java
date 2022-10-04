@@ -64,8 +64,10 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testRetrieveMultipleStatistics() throws Exception {
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
+		communicator.getMultipleStatistics();
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Assert.assertEquals(2, devices.size());
 
@@ -89,16 +91,16 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testRetrieveMultipleStatisticsWithSensorWhereThermalInformation() throws Exception {
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
-		System.out.println(properties);
 		String key = "Sensor3005-Thermal#";
 		Assert.assertNotNull( properties.get(key + "Humidity(%)"));
 		Assert.assertNotNull( properties.get(key + "Temperature(F)"));
-		Assert.assertNotNull( properties.get(key + properties.get(key + "LastUpdate")));
-		Assert.assertNotNull( properties.get(key + properties.get(key + "RecentData")));
+		Assert.assertNotNull( properties.get(key + "LastUpdate"));
+		Assert.assertNotNull( properties.get(key + "RecentData"));
 	}
 
 	/**
@@ -108,6 +110,7 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testRetrieveMultipleStatisticsWithSensorWhereAirQualityInformation() throws Exception {
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
@@ -193,6 +196,7 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testControlAggregatedDeviceWithRegionTag() throws Exception {
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
@@ -217,6 +221,7 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testControlAggregatedDeviceWithCreateRegionTag() throws Exception {
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
@@ -252,6 +257,7 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testControlAggregatedDeviceWithDeleteRegionTag() throws Exception {
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
@@ -280,10 +286,12 @@ class SembientAggregatorCommunicatorTest {
 	@Test
 	void testControlAggregatedDeviceWithChangeRegionTag() throws Exception {
 		testControlAggregatedDeviceWithCreateRegionTag();
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
+		System.out.println(properties);
 		Assert.assertEquals("res3", properties.get("RegionTag#NewTag"));
 		Assert.assertEquals("res3", properties.get("RegionTag#Tag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -306,6 +314,7 @@ class SembientAggregatorCommunicatorTest {
 	@Test
 	void testControlAggregatedDeviceWithOccupancyList() throws Exception {
 		testControlAggregatedDeviceWithCreateRegionTag();
+		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
@@ -528,6 +537,11 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertEquals("Test", stats.get("Buildings#Building01"));
 	}
 
+	/**
+	 * Test polling interval
+	 *
+	 * @throws Exception if getMultipleStatistics
+	 */
 	@Test
 	void testPollingInterval() throws Exception {
 		communicator.setPollingInterval("1");
@@ -535,8 +549,6 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
-		System.out.println(extendedStatistics.getStatistics());
 		extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
-		System.out.println(extendedStatistics.getStatistics());
 	}
 }
