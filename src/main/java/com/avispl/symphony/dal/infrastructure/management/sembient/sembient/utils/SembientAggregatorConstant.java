@@ -12,10 +12,6 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.util
  */
 public class SembientAggregatorConstant {
 
-	public static final String TVOCVALUE_MICROGRAM = "TVOCValue(microgram/m3)";
-	public static final String PM_25_VALUE_MICROMET = "PM25Value(micromet)";
-	public static final long MINUTE_TO_MS = 60000L;
-
 	/**
 	 * private constructor to prevent instance initialization
 	 */
@@ -73,4 +69,34 @@ public class SembientAggregatorConstant {
 	public static final String MESSAGE = "Message";
 	public static final String STATUS_CODE_200 = "200";
 	public static final String CO2_VALUE = "CO2Value(C)";
+	public static final String FLOOR_PROPERTY = "Floor%02d";
+	public static final String BUILDING_PROPERTY = "Buildings#Building%02d";
+	public static final String COLON = ":";
+	public static final String TVOCVALUE_MICROGRAM = "TVOCValue(microgram/m3)";
+	public static final String PM_25_VALUE_MICROMET = "PM25Value(micromet)";
+	public static final long MINUTE_TO_MS = 60000L;
+	public static final String NEXT_POLLING_INTERVAL = "NextPollingInterval";
+	public static final String PROPERTY_LAST_UPDATE = "OccupancyList#LastUpdate";
+	// Parameter constants
+	public static final String PARAM_REGION_NAME = "?regionName=";
+	public static final String PARAM_REGION_TAGS = "&regionTags=";
+	public static final String PARAM_REGION_TYPE = "?regionType=";
+	// Work hours constants
+	public static final String WORK_HOUR_9 = "9";
+	public static final String WORK_HOUR_10 = "10";
+	public static final String WORK_HOUR_11 = "11";
+	public static final String WORK_HOUR_12 = "12";
+	public static final String WORK_HOUR_13 = "13";
+	public static final String WORK_HOUR_14 = "14";
+	public static final String WORK_HOUR_15 = "15";
+	public static final String WORK_HOUR_16 = "16";
+	public static final String WORK_HOUR_17 = "17";
+	// Command constants
+	public static final String COMMAND_SPACE_TAGS = "/v3.1/space/tags/";
+	public static final String COMMAND_USERS_LOGIN = "/v3.1/users/login";
+	public static final String COMMAND_SPACE_BUILDINGS = "/v3.1/space/buildings/";
+	public static final String COMMAND_SPACE_REGIONS = "/v3.1/space/regions/";
+	public static final String COMMAND_IAQ_TIMESERIES = "/v3.1/iaq/timeseries/";
+	public static final String COMMAND_THERMAL_TIMESERIES = "/v3.1/thermal/timeseries/";
+	public static final String COMMAND_OCCUPANCY_TIMESERIES = "/v3.1/occupancy/timeseries/";
 }

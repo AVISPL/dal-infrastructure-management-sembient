@@ -7,8 +7,6 @@ import java.util.Arrays;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 
-import com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.login.LoginResponse;
-
 /**
  * Building wrapper class
  *
