@@ -540,7 +540,7 @@ class SembientAggregatorCommunicatorTest {
 	/**
 	 * Test polling interval
 	 *
-	 * @throws Exception if getMultipleStatistics
+	 * @throws Exception if fail to getMultipleStatistics, retrieveMultipleStatistics
 	 */
 	@Test
 	void testPollingInterval() throws Exception {
@@ -549,6 +549,7 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
-		extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
+		communicator.retrieveMultipleStatistics();
+		Assert.assertNotNull(extendedStatistics.getStatistics().get("NextPollingInterval"));
 	}
 }
