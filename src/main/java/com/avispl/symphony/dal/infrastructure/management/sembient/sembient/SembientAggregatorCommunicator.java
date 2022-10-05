@@ -602,6 +602,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								throw new CommandFailureException("Fail to create region with value is: " + controllableProperty.getValue()
 										, createRequest, createRegionTagWrapperControl.toString());
 							}
+							lastNewTag.put(deviceId, SembientAggregatorConstant.EMPTY);
 							// Repopulate region tags group
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
