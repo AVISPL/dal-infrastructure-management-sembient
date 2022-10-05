@@ -705,7 +705,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				int index = 0;
 				for (BuildingResponse building : cachedBuildings) {
-					stats.put(String.format(SembientAggregatorConstant.BUILDING_PROPERTY, (index + 1)), building.getBuildingName());
+					stats.put(String.format(SembientAggregatorConstant.BUILDING_PROPERTY, index + 1), building.getBuildingName());
 					index++;
 				}
 				if (buildingResponse != null) {
@@ -721,7 +721,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							for (String floorName : floorNames) {
 								if (filter.equals(floorName)) {
 									i++;
-									String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, (i));
+									String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, i);
 									stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
 									break;
 								}
@@ -731,9 +731,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						int i = 0;
 						for (String floorName : floorNames) {
 							i++;
-							String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, (i));
+							String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, i);
 							stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
-							break;
 						}
 					}
 				}
@@ -1067,24 +1066,22 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						+ regionName;
 		RegionTagWrapperMonitor regionTagWrapperControl = this.doGetWithRetry(request, RegionTagWrapperMonitor.class);
 		// Get getRegionResponse by first index because it only has 1 element.
-		if (regionTagWrapperControl != null) {
-			// There are some cases that getRegionResponse array is empty
-			if (regionTagWrapperControl.getRegionResponse().length != 0 && regionTagWrapperControl.getRegionResponse()[0].getRegionTags().length != 0) {
-				String[] regionTags = regionTagWrapperControl.getRegionResponse()[0].getRegionTags();
-				List<String> values1 = new ArrayList<>(Arrays.asList(regionTags));
-				String currentTag = values1.get(0);
-				if (aggregatedDeviceTagMap.containsKey(deviceId)) {
-					if (values1.contains(aggregatedDeviceTagMap.get(deviceId))) {
-						// Check if latest list contain previous tag value
-						currentTag = aggregatedDeviceTagMap.get(deviceId);
-					} else {
-						// Set back to default value if aggregatedDeviceTagMap isn't update to the latest one.
-						aggregatedDeviceTagMap.put(deviceId, currentTag);
-					}
+		// There are some cases that getRegionResponse array is empty
+		if (regionTagWrapperControl != null && regionTagWrapperControl.getRegionResponse().length != 0 && regionTagWrapperControl.getRegionResponse()[0].getRegionTags().length != 0) {
+			String[] regionTags = regionTagWrapperControl.getRegionResponse()[0].getRegionTags();
+			List<String> values1 = new ArrayList<>(Arrays.asList(regionTags));
+			String currentTag = values1.get(0);
+			if (aggregatedDeviceTagMap.containsKey(deviceId)) {
+				if (values1.contains(aggregatedDeviceTagMap.get(deviceId))) {
+					// Check if latest list contain previous tag value
+					currentTag = aggregatedDeviceTagMap.get(deviceId);
+				} else {
+					// Set back to default value if aggregatedDeviceTagMap isn't update to the latest one.
+					aggregatedDeviceTagMap.put(deviceId, currentTag);
 				}
-				controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, values1, currentTag));
-				controls.add(createButton(properties, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
 			}
+			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, values1, currentTag));
+			controls.add(createButton(properties, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
 		}
 		// Not populate Delete button and Tag dropdown if there are no tags in region
 	}
@@ -1272,7 +1269,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			}
 		} else {
-			for (Entry<String, String> entry: properties.entrySet()) {
+			for (Entry<String, String> entry : properties.entrySet()) {
 				if (entry.getKey().contains(SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
 						+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.LAST_UPDATE)) {
 					return;
@@ -1451,7 +1448,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
 	 *
 	 * @param url to retrieve data from
-	 * @return JsonNode response body
+	 * @param clazz Class instance that will be converted to
+	 * @return T instance of the input class
 	 * @throws Exception if a communication error occurs
 	 */
 	private <T> T doPutWithRetry(String url, Class<T> clazz) throws Exception {
