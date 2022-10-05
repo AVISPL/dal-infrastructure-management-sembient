@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * OccupancyRegionWrapper class
+ * OccupancyRegionWrapper class - A class that contain information of array of {@link OccupancyRegionResponse}
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

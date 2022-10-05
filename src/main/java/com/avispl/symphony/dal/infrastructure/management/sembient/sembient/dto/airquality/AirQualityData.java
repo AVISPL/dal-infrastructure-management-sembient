@@ -4,7 +4,13 @@
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.airquality;
 
 /**
- * AirQualityData class
+ * AirQualityData class - Provide some information relating to air quality in a specific region
+ * <ol>
+ *   <li>C02(C)</li>
+ *   <li>TVOc(micromet)</li>
+ *   <li>PM25(microgram/m3)</li>
+ *   <li>Timestamp(s)</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

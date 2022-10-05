@@ -4,7 +4,7 @@
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.region;
 
 /**
- * RegionTagResponse class
+ * RegionTagResponse class - A class contain information about region name and tags
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

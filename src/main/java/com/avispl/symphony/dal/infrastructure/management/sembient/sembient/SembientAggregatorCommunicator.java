@@ -1177,6 +1177,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			}
 		} else {
+			if (properties.containsKey(SembientAggregatorConstant.LAST_UPDATE)) {
+				return;
+			}
 			populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 		}
 	}

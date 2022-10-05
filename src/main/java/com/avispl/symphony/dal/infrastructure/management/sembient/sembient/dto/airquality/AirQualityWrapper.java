@@ -7,7 +7,11 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * AirQualityWrapper class
+ * AirQualityWrapper class - A wrapper class contain information about:
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>A body wrapper {@link AirQualitySensorWrapper}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

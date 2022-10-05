@@ -8,6 +8,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * OccupancyWrapper class
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>{@link OccupancyRegionWrapper}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

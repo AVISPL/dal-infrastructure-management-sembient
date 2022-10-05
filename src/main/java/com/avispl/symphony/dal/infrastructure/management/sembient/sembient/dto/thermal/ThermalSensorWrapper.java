@@ -8,7 +8,11 @@ import java.util.Arrays;
 import com.fasterxml.jackson.annotation.JsonAlias;
 
 /**
- * ThermalSensorWrapper class
+ * ThermalSensorWrapper class - A wrapper class contain information about:
+ * <ol>
+ *   <li>Sensor name</li>
+ *   <li>List of thermal response from sensor{@link ThermalSensorResponse}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

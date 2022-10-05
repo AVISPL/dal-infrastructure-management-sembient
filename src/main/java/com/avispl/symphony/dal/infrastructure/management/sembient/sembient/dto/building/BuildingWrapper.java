@@ -8,7 +8,11 @@ import java.util.Arrays;
 import com.fasterxml.jackson.annotation.JsonAlias;
 
 /**
- * Building wrapper class
+ * Building wrapper class - A class that provide information about:
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>Array of {@link BuildingResponse}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

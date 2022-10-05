@@ -9,7 +9,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Arrays;
 
 /**
- * AirQualitySensorResponse class
+ * AirQualitySensorResponse class - This class provide some basic information about air quality information in this region
+ * <ol>
+ *   <li>Sensor name</li>
+ *   <li>Region name</li>
+ *   <li>Array of {@link AirQualityData}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

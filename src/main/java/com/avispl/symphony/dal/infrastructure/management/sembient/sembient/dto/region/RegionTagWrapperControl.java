@@ -7,7 +7,11 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * RegionTagWrapperControl class
+ * RegionTagWrapperControl class - A wrapper class that contain information about
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>{@link RegionResponse}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022
