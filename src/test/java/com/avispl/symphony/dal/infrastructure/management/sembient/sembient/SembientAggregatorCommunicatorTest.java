@@ -18,7 +18,6 @@ import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
 
 @Tag("RealDevice")
 class SembientAggregatorCommunicatorTest {
-
 	private SembientAggregatorCommunicator communicator;
 
 	@BeforeEach
@@ -49,7 +48,6 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
-		System.out.println(stats);
 		Assert.assertEquals("TEST", stats.get("BuildingTest#BuildingId"));
 		Assert.assertEquals("1st floor", stats.get("BuildingTest#Floor01"));
 		Assert.assertEquals("Sandbox", stats.get("BuildingTest#Address"));
@@ -122,36 +120,35 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertNotNull(properties.get(key + "RecentData"));
 	}
 
+//	/** 
+//	 * Test retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
+//	 * <p>
+//	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
+//	 */
+//	@Test
+//	void testRetrieveMultipleStatisticsWithSensorWhereAirQualityNoData() throws Exception {
+//		communicator.getMultipleStatistics();
+//		communicator.retrieveMultipleStatistics();
+//		Thread.sleep(30000);
+//		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+//		Map<String, String> properties = devices.get(0).getProperties();
+//		Assert.assertEquals("No data", properties.get("Sensor3005-AirQuality#Message"));
+//	}
 
-	/**
-	 * Test retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
-	 * <p>
-	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
-	 */
-	@Test
-	void testRetrieveMultipleStatisticsWithSensorWhereAirQualityNoData() throws Exception {
-		communicator.getMultipleStatistics();
-		communicator.retrieveMultipleStatistics();
-		Thread.sleep(30000);
-		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("No data", properties.get("Sensor3005-AirQuality#Message"));
-	}
-
-	/**
-	 * Test retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
-	 * <p>
-	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
-	 */
-	@Test
-	void testRetrieveMultipleStatisticsWithSensorWhereThermalNoData() throws Exception {
-		communicator.getMultipleStatistics();
-		communicator.retrieveMultipleStatistics();
-		Thread.sleep(30000);
-		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("No data", properties.get("Sensor3005-Thermal#Message"));
-	}
+//	/**
+//	 * Test retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
+//	 * <p>
+//	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
+//	 */
+//	@Test
+//	void testRetrieveMultipleStatisticsWithSensorWhereThermalNoData() throws Exception {
+//		communicator.getMultipleStatistics();
+//		communicator.retrieveMultipleStatistics();
+//		Thread.sleep(30000);
+//		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+//		Map<String, String> properties = devices.get(0).getProperties();
+//		Assert.assertEquals("No data", properties.get("Sensor3005-Thermal#Message"));
+//	}
 
 	/**
 	 * Test retrieveMultipleStatistics with aggregated device Occupancy information group

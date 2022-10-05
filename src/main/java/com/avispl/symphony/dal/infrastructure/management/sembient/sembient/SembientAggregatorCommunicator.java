@@ -1137,26 +1137,29 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			for (Map.Entry<String, AirQualityData[]> entry : sensorAndIAQMap.entrySet()
 			) {
 				// Remove previous properties
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.CO2_VALUE);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.TVOCVALUE_MICROGRAM);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.PM_25_VALUE_MICROMET);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.LAST_UPDATE);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.RECENT_DATA);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.MESSAGE);
+				String co2Property = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.CO2_VALUE;
+				String tvocProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.TVOCVALUE_MICROGRAM;
+				String pm25Property = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.PM_25_VALUE_MICROMET;
+				String lastUpdateProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.LAST_UPDATE;
+				String recentDataProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.RECENT_DATA;
+				String messageProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.MESSAGE;
+				properties.remove(co2Property);
+				properties.remove(tvocProperty);
+				properties.remove(pm25Property);
+				properties.remove(lastUpdateProperty);
+				properties.remove(recentDataProperty);
+				properties.remove(messageProperty);
 				//
 				int lastIndex = entry.getValue().length - 1;
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.CO2_VALUE, entry.getValue()[lastIndex].getCo2());
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.TVOCVALUE_MICROGRAM, entry.getValue()[lastIndex].getTvoc());
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.PM_25_VALUE_MICROMET, entry.getValue()[lastIndex].getPm25());
+				properties.put(co2Property, entry.getValue()[lastIndex].getCo2());
+				properties.put(tvocProperty, entry.getValue()[lastIndex].getTvoc());
+				properties.put(pm25Property, entry.getValue()[lastIndex].getPm25());
 				if (!isPopulated) {
 					DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
 					obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
@@ -1168,11 +1171,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					long dif = currentTimeMs - resInMs;
 					long hourInMs = 3600 * 1000;
 					boolean isRecentData = (dif) < hourInMs;
-					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-							+ SembientAggregatorConstant.RECENT_DATA, String.valueOf(isRecentData));
+					properties.put(recentDataProperty, String.valueOf(isRecentData));
 					// now we format the res by using SimpleDateFormat
-					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-							+ SembientAggregatorConstant.LAST_UPDATE, obj.format(res));
+					properties.put(lastUpdateProperty, obj.format(res));
 					isPopulated = true;
 				}
 			}
@@ -1236,23 +1237,26 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			boolean isPopulated = false;
 			for (Map.Entry<String, ThermalData[]> entry : sensorAndThermalMap.entrySet()
 			) {
+				String sensorTemperatureProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.TEMPERATURE_F;
+				String sensorLastUpdateProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.LAST_UPDATE;
+				String sensorRecentDataProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.RECENT_DATA;
+				String sensorHumidityProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.HUMIDITY;
+				String sensorMessageProperty = SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
+						+ SembientAggregatorConstant.MESSAGE;
 				// Remove previous properties
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.TEMPERATURE_F);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.LAST_UPDATE);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.RECENT_DATA);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.HUMIDITY);
-				properties.remove(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.MESSAGE);
+				properties.remove(sensorTemperatureProperty);
+				properties.remove(sensorLastUpdateProperty);
+				properties.remove(sensorRecentDataProperty);
+				properties.remove(sensorHumidityProperty);
+				properties.remove(sensorMessageProperty);
 				//
 				int lastIndex = entry.getValue().length - 1;
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.TEMPERATURE_F, entry.getValue()[lastIndex].getTemperature());
-				properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH
-						+ SembientAggregatorConstant.HUMIDITY, entry.getValue()[lastIndex].getHumidity());
+				properties.put(sensorTemperatureProperty, entry.getValue()[lastIndex].getTemperature());
+				properties.put(sensorHumidityProperty, entry.getValue()[lastIndex].getHumidity());
 				if (!isPopulated) {
 					DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
 					obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
@@ -1264,10 +1268,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					long dif = currentTimeMs - resInMs;
 					long hourInMs = 3600 * 1000;
 					boolean isRecentData = (dif) < hourInMs;
-					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
-							+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.RECENT_DATA, String.valueOf(isRecentData));
-					properties.put(SembientAggregatorConstant.SENSOR + entry.getKey() + SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
-							+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.LAST_UPDATE, obj.format(res));
+					properties.put(sensorRecentDataProperty, String.valueOf(isRecentData));
+					properties.put(sensorLastUpdateProperty, obj.format(res));
 					isPopulated = true;
 				}
 			}
