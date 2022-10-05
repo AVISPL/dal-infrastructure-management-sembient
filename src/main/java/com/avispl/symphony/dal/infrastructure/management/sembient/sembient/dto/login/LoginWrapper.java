@@ -7,7 +7,11 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * LoginWrapper class
+ * LoginWrapper class - A class that provide information about:
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>{@link LoginResponse}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

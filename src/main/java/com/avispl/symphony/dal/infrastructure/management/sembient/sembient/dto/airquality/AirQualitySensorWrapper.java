@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import java.util.Arrays;
 
 /**
- * AirQualitySensorWrapper class
+ * AirQualitySensorWrapper class - A wrapper class contains information about sensor name and array of {@link AirQualitySensorResponse}
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

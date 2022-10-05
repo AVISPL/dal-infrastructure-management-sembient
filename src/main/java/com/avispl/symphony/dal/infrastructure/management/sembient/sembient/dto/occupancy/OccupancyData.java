@@ -6,7 +6,12 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * OccupancyData class
+ * OccupancyData class - A class that contain occupancy data:
+ * <ol>
+ *   <li>Hour</li>
+ *   <li>Number of occupancy during this Hour</li>
+ *   <li>Usage-time: Total amount of time that user use this region</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

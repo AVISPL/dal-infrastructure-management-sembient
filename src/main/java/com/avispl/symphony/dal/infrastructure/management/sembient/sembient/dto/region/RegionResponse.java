@@ -8,7 +8,14 @@ import java.util.Arrays;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * RegionResponse class
+ * RegionResponse class - A class contain information of a region:
+ * <ol>
+ *   <li>Region name</li>
+ *   <li>Region type (Workstation,etc.)</li>
+ *   <li>Total capacity of this region</li>
+ *   <li>List of sensor names</li>
+ *   <li>List of sensor tags</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

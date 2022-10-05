@@ -6,7 +6,13 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
 import com.fasterxml.jackson.annotation.JsonAlias;
 
 /**
- * LoginResponse class
+ * LoginResponse class - A class contain information about:
+ * <ol>
+ *   <li>Expiration time(s) - 1 hour</li>
+ *   <li>Bearer token</li>
+ *   <li>Customer Id</li>
+ *   <li>API key that we will attach in the header of every request</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

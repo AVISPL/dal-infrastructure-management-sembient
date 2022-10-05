@@ -6,7 +6,11 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
 import com.fasterxml.jackson.annotation.JsonAlias;
 
 /**
- * CustomerDefinedTagWrapper class
+ * CustomerDefinedTagWrapper class - A class that provide information about:
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>Array of {@link CustomerDefinedTagResponse}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

@@ -6,7 +6,7 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
 import java.util.Arrays;
 
 /**
- * BuildingResponse class
+ * BuildingResponse class - A class contain information a building(id, name, address), list of floors, list of types inside this region
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

@@ -9,7 +9,12 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * ThermalSensorResponse class
+ * ThermalSensorResponse class - A class contain information of thermal:
+ * <ol>
+ *   <li>Sensor name</li>
+ *   <li>Region name</li>
+ *   <li>List of {@link ThermalData}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

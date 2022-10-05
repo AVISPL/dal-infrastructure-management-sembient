@@ -9,7 +9,11 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * RegionWrapper class
+ * RegionWrapper class - A wrapper class contain information about:
+ * <ol>
+ *   <li>Status code</li>
+ *   <li>List of {@link RegionResponse}</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022

@@ -4,7 +4,12 @@
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.thermal;
 
 /**
- * ThermalData class
+ * ThermalData class - A class contain information of thermal:
+ * <ol>
+ *   <li>Temperature(F)</li>
+ *   <li>Humidity(%)</li>
+ *   <li>Timestamp(s)</li>
+ * </ol>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 9/30/2022
