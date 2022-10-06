@@ -1394,7 +1394,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int retryAttempts = 0;
 		Exception lastError = null;
 
-		while (retryAttempts++ < 10 && serviceRunning) {
+		while (retryAttempts++ < 10) {
 			try {
 				return doPut(url, null, clazz);
 			} catch (CommandFailureException e) {
@@ -1407,16 +1407,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			} catch (Exception e) {
 				lastError = e;
-				// if service is running, log error
-				if (serviceRunning) {
-					logger.error(String.format("Sembient API error while retrieving %s data", url), e);
-				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(200);
 		}
 
-		if (retryAttempts == 10 && serviceRunning) {
+		if (retryAttempts == 10) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
@@ -1436,7 +1431,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int retryAttempts = 0;
 		Exception lastError = null;
 
-		while (retryAttempts++ < 10 && serviceRunning) {
+		while (retryAttempts++ < 10) {
 			try {
 				this.doDelete(url);
 			} catch (CommandFailureException e) {
@@ -1449,16 +1444,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			} catch (Exception e) {
 				lastError = e;
-				// if service is running, log error
-				if (serviceRunning) {
-					logger.error(String.format("Sembient API error while retrieving %s data", url), e);
-				}
+				logger.error(String.format("Sembient API error while retrieving %s data", url), e);
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(200);
 		}
 
-		if (retryAttempts == 10 && serviceRunning) {
+		if (retryAttempts == 10) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
