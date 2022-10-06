@@ -493,7 +493,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	protected void internalInit() throws Exception {
 		this.setTrustAllCertificates(true);
 		// Init thread
-		executorService = Executors.newFixedThreadPool(8);
+		executorService = Executors.newFixedThreadPool(SembientAggregatorConstant.MAX_NO_THREADS);
 		executorService.submit(deviceDataLoader = new SembientDeviceDataLoader());
 
 		validDeviceMetaDataRetrievalPeriodTimestamp = System.currentTimeMillis();
@@ -551,7 +551,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 
 			Map<String, String> statFromCached = deviceToBeControlled.getProperties();
 			List<AdvancedControllableProperty> controlFromCached = deviceToBeControlled.getControllableProperties();
-			if (groupName.equals(SembientAggregatorConstant.OCCUPANCY_LIST) && propertyName.equals(SembientAggregatorConstant.HOUR)) {
+			if (SembientAggregatorConstant.OCCUPANCY_LIST.equals(groupName) && SembientAggregatorConstant.HOUR.equals(propertyName)) {
 				// Get current date:
 				DateTimeFormatter formatter = DateTimeFormatter.ofPattern(SembientAggregatorConstant.YYYY_MM_DD);
 				LocalDate now = LocalDate.now(ZoneId.of(SembientAggregatorConstant.UTC_TIMEZONE));
@@ -561,7 +561,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				String yesterdayDate = formatter.format(yesterday);
 				aggregatedDeviceHourMap.put(deviceId, (String) controllableProperty.getValue());
 				populateOccupancyData(statFromCached, controlFromCached, currentDate, yesterdayDate, deviceId, buildingName, floorName, regionName);
-			} else if (groupName.equals(SembientAggregatorConstant.REGION_TAG)) {
+			} else if (SembientAggregatorConstant.REGION_TAG.equals(groupName)) {
 				switch (propertyName) {
 					case SembientAggregatorConstant.NEW_TAG:
 						String newTagValue = (String) controllableProperty.getValue();
@@ -582,7 +582,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						aggregatedDeviceTagMap.put(deviceId, (String) controllableProperty.getValue());
 						statFromCached.put(SembientAggregatorConstant.PROPERTY_TAG, (String) controllableProperty.getValue());
 						for (AdvancedControllableProperty control : controlFromCached) {
-							if (control.getName().equals(SembientAggregatorConstant.PROPERTY_TAG)) {
+							if (SembientAggregatorConstant.PROPERTY_TAG.equals(control.getName())) {
 								control.setTimestamp(new Date());
 								control.setValue(controllableProperty.getValue());
 								break;
@@ -594,13 +594,15 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						if (StringUtils.isNullOrEmpty(newTag)) {
 							throw new ResourceNotReachableException("NewTag value cannot be empty.");
 						}
-						String createRequest = SembientAggregatorConstant.COMMAND_SPACE_TAGS + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
-								+ floorName + SembientAggregatorConstant.PARAM_REGION_NAME + regionName + SembientAggregatorConstant.PARAM_REGION_TAGS + newTag;
-						RegionTagWrapperControl createRegionTagWrapperControl = this.doPutWithRetry(createRequest, RegionTagWrapperControl.class);
+						StringBuilder createRequestBuilder = new StringBuilder();
+						createRequestBuilder.append(SembientAggregatorConstant.COMMAND_SPACE_TAGS).append(loginResponse.getCustomerId()).append(SembientAggregatorConstant.SLASH).append(buildingName)
+								.append(SembientAggregatorConstant.SLASH).append(floorName).append(SembientAggregatorConstant.PARAM_REGION_NAME).append(regionName).append(SembientAggregatorConstant.PARAM_REGION_TAGS)
+								.append(newTag);
+						RegionTagWrapperControl createRegionTagWrapperControl = this.doPutWithRetry(createRequestBuilder.toString(), RegionTagWrapperControl.class);
 						if (createRegionTagWrapperControl != null) {
 							if (!SembientAggregatorConstant.STATUS_CODE_200.equals(createRegionTagWrapperControl.getStatusCode())) {
 								throw new CommandFailureException("Fail to create region with value is: " + controllableProperty.getValue()
-										, createRequest, createRegionTagWrapperControl.toString());
+										, createRequestBuilder.toString(), createRegionTagWrapperControl.toString());
 							}
 							lastNewTag.put(deviceId, SembientAggregatorConstant.EMPTY);
 							// Repopulate region tags group
@@ -614,8 +616,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
 							populateRegionTag(statFromCached, controlFromCached, deviceId);
 						} else {
-							throw new CommandFailureException("Fail to create region with value is: " + controllableProperty.getValue()
-									, createRequest, null);
+							logger.error("Error while creating region with status code: 429 and value " + newTag);
+							throw new ResourceNotReachableException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
 						}
 						break;
 					case SembientAggregatorConstant.LABEL_DELETE:
@@ -626,8 +628,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						String deleteRequest = SembientAggregatorConstant.COMMAND_SPACE_TAGS + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
 								+ floorName + SembientAggregatorConstant.PARAM_REGION_NAME + regionName + SembientAggregatorConstant.PARAM_REGION_TAGS + valueToBeDelete;
 						try {
-							this.doDeleteWithRetry(deleteRequest);
-
+							this.doDeleteWithRetry(deleteRequest, valueToBeDelete);
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
 							controlFromCached.removeIf(
@@ -637,6 +638,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
 							populateRegionTag(statFromCached, controlFromCached, deviceId);
+						} catch (ResourceNotReachableException resourceNotReachableException) {
+							// This exception is coming from the doDeleteWithRetry method
+							throw resourceNotReachableException;
 						} catch (Exception e) {
 							throw new CommandFailureException("Fail to delete region with value is: " + valueToBeDelete
 									, deleteRequest, null, e);
@@ -675,7 +679,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	@Override
 	public List<Statistics> getMultipleStatistics() throws Exception {
 		reentrantLock.lock();
-		Map<String, String> stats = new HashMap<>();
+		Map<String, String> newStatistics = new HashMap<>();
 		ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 		try {
 			// Login to get the token if token has expired.
@@ -685,10 +689,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			// Put NextPollingInterval properties to stats map
 			DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
 			obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
-			stats.put(SembientAggregatorConstant.NEXT_POLLING_INTERVAL, obj.format(validDeviceMetaDataRetrievalPeriodTimestamp));
+			newStatistics.put(SembientAggregatorConstant.NEXT_POLLING_INTERVAL, obj.format(validDeviceMetaDataRetrievalPeriodTimestamp));
 			if (cachedBuildings != null && cachedBuildings.size() != 0) {
 				BuildingResponse buildingResponse = null;
-				if (buildingFilter != null) {
+				if (StringUtils.isNotNullOrEmpty(buildingFilter)) {
 					for (BuildingResponse building : cachedBuildings) {
 						if (building.getBuildingName().equals(buildingFilter)) {
 							buildingResponse = building;
@@ -699,21 +703,21 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					buildingResponse = cachedBuildings.stream().findFirst().get();
 				}
 				if (buildingResponse != null) {
-					stats.put(SembientAggregatorConstant.CURRENT_FILTER_BUILDING, buildingResponse.getBuildingName());
+					newStatistics.put(SembientAggregatorConstant.CURRENT_FILTER_BUILDING, buildingResponse.getBuildingName());
 				} else {
-					stats.put(SembientAggregatorConstant.CURRENT_FILTER_BUILDING, SembientAggregatorConstant.NO_BUILDING_FOUND);
+					newStatistics.put(SembientAggregatorConstant.CURRENT_FILTER_BUILDING, SembientAggregatorConstant.NO_BUILDING_FOUND);
 				}
 				int index = 0;
 				for (BuildingResponse building : cachedBuildings) {
-					stats.put(String.format(SembientAggregatorConstant.BUILDING_PROPERTY, index + 1), building.getBuildingName());
+					newStatistics.put(String.format(SembientAggregatorConstant.BUILDING_PROPERTY, index + 1), building.getBuildingName());
 					index++;
 				}
 				if (buildingResponse != null) {
 					String buildingID = buildingResponse.getBuildingID();
 					String[] floorNames = buildingResponse.getFloors();
 					// Filter by floors
-					stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.BUILDING_ID, buildingID);
-					stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.ADDRESS, buildingResponse.getAddress());
+					newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.BUILDING_ID, buildingID);
+					newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.ADDRESS, buildingResponse.getAddress());
 					if (StringUtils.isNotNullOrEmpty(floorFilter)) {
 						String[] floorFilters = floorFilter.split(SembientAggregatorConstant.COMMA);
 						int i = 0;
@@ -722,7 +726,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								if (filter.equals(floorName)) {
 									i++;
 									String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, i);
-									stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
+									newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
 									break;
 								}
 							}
@@ -732,13 +736,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						for (String floorName : floorNames) {
 							i++;
 							String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, i);
-							stats.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
+							newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
 						}
 					}
 				}
 			}
 
-			extendedStatistics.setStatistics(stats);
+			extendedStatistics.setStatistics(newStatistics);
 		} finally {
 			reentrantLock.unlock();
 		}
@@ -756,7 +760,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (executorService == null) {
 				// Due to the bug that after changing properties on fly - the adapter is destroyed but adapter is not initialized properly,
 				// so executor service is not running. We need to make sure executorService exists
-				executorService = Executors.newFixedThreadPool(8);
+				executorService = Executors.newFixedThreadPool(SembientAggregatorConstant.MAX_NO_THREADS);
 				executorService.submit(deviceDataLoader = new SembientDeviceDataLoader());
 			}
 
@@ -866,6 +870,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			try {
 				String loginRawResponse = this.doPost(SembientAggregatorConstant.COMMAND_USERS_LOGIN, headers, SembientAggregatorConstant.EMPTY);
 				LoginWrapper loginWrapper = new ObjectMapper().readValue(loginRawResponse, LoginWrapper.class);
+				if (SembientAggregatorConstant.STATUS_CODE_401.equals(loginWrapper.getStatusCode())) {
+					throw new FailedLoginException("Wrong username/password.");
+				}
 				loginResponse = loginWrapper.getLoginResponse();
 				loginResponse.setExpirationTime(currentTime + loginResponse.getExp() * 1000L);
 			} catch (Exception e) {
@@ -925,14 +932,14 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			return;
 		}
 		// Filter building:
-		if (buildingFilter == null && cachedBuildings.stream().findFirst().isPresent()) {
+		if (StringUtils.isNullOrEmpty(buildingFilter) && cachedBuildings.stream().findFirst().isPresent()) {
 			String buildingID = cachedBuildings.stream().findFirst().get().getBuildingID();
 			String[] floorNames = cachedBuildings.stream().findFirst().get().getFloors();
 			// Filter by floors
 			filterByFloors(buildingID, floorNames);
 		} else {
 			for (BuildingResponse response : cachedBuildings) {
-				if (response.getBuildingName().equals(buildingFilter)) {
+				if (response.getBuildingName().equals(buildingFilter.trim())) {
 					String buildingID = response.getBuildingID();
 					String[] floorNames = response.getFloors();
 					filterByFloors(buildingID, floorNames);
@@ -957,7 +964,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			String[] listFloorToBeFilter = floorFilter.split(SembientAggregatorConstant.COMMA);
 			for (String floor : listFloorToBeFilter) {
 				for (String floorName : floorNames) {
-					if (floor.equals(floorName)) {
+					if (floor.trim().equals(floorName)) {
 						// Filter by region type
 						if (StringUtils.isNotNullOrEmpty(regionTypeFilter)) {
 							String[] listTypeToBeFilter = regionTypeFilter.split(SembientAggregatorConstant.COMMA);
@@ -1069,10 +1076,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		// There are some cases that getRegionResponse array is empty
 		if (regionTagWrapperControl != null && regionTagWrapperControl.getRegionResponse().length != 0 && regionTagWrapperControl.getRegionResponse()[0].getRegionTags().length != 0) {
 			String[] regionTags = regionTagWrapperControl.getRegionResponse()[0].getRegionTags();
-			List<String> values1 = new ArrayList<>(Arrays.asList(regionTags));
-			String currentTag = values1.get(0);
+			List<String> tags = new ArrayList<>(Arrays.asList(regionTags));
+			String currentTag = tags.get(0);
 			if (aggregatedDeviceTagMap.containsKey(deviceId)) {
-				if (values1.contains(aggregatedDeviceTagMap.get(deviceId))) {
+				if (tags.contains(aggregatedDeviceTagMap.get(deviceId))) {
 					// Check if latest list contain previous tag value
 					currentTag = aggregatedDeviceTagMap.get(deviceId);
 				} else {
@@ -1080,7 +1087,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					aggregatedDeviceTagMap.put(deviceId, currentTag);
 				}
 			}
-			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, values1, currentTag));
+			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, tags, currentTag));
 			controls.add(createButton(properties, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
 		}
 		// Not populate Delete button and Tag dropdown if there are no tags in region
@@ -1121,9 +1128,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 						return;
 					}
-				} else {
-					populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
-					return;
 				}
 			}
 			Map<String, AirQualityData[]> sensorAndIAQMap = new HashMap<>();
@@ -1177,11 +1181,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					isPopulated = true;
 				}
 			}
-		} else {
-			if (properties.containsKey(SembientAggregatorConstant.LAST_UPDATE)) {
-				return;
-			}
-			populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 		}
 	}
 
@@ -1221,9 +1220,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
 						return;
 					}
-				} else {
-					populateNoData(properties, SembientAggregatorConstant.THERMAL);
-					return;
 				}
 			}
 
@@ -1273,14 +1269,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					isPopulated = true;
 				}
 			}
-		} else {
-			for (Entry<String, String> entry : properties.entrySet()) {
-				if (entry.getKey().contains(SembientAggregatorConstant.DASH + SembientAggregatorConstant.THERMAL
-						+ SembientAggregatorConstant.HASH + SembientAggregatorConstant.LAST_UPDATE)) {
-					return;
-				}
-			}
-			populateNoData(properties, SembientAggregatorConstant.THERMAL);
 		}
 	}
 
@@ -1323,6 +1311,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				+ buildingName + SembientAggregatorConstant.SLASH
 				+ floorName + SembientAggregatorConstant.SLASH + currentDate, OccupancyWrapper.class);
 		if (occupancyWrapper != null) {
+			properties.remove(SembientAggregatorConstant.PROPERTY_MESSAGE);
 			OccupancyRegionResponse[] occupancyRegionResponses = new OccupancyRegionResponse[0];
 			if (SembientAggregatorConstant.STATUS_CODE_200.equals(occupancyWrapper.getStatusCode()) && occupancyWrapper.getOccupancyRegionWrappers() != null) {
 				occupancyRegionResponses = occupancyWrapper.getOccupancyRegionWrappers().getOccupancyRegionResponses();
@@ -1349,7 +1338,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			// Remove previous properties
 			properties.remove(SembientAggregatorConstant.PROPERTY_HOUR);
 			properties.remove(SembientAggregatorConstant.PROPERTY_CURRENT_DATE);
-			properties.remove(SembientAggregatorConstant.PROPERTY_LAST_UPDATE);
 			properties.remove(SembientAggregatorConstant.PROPERTY_MESSAGE);
 			properties.remove(SembientAggregatorConstant.PROPERTY_NUMBER_OF_OCCUPANCE);
 			properties.remove(SembientAggregatorConstant.PROPERTY_USAGE_TIME);
@@ -1389,59 +1377,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			values.add(SembientAggregatorConstant.WORK_HOUR_17);
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_HOUR, values, hourValue));
 			properties.put(SembientAggregatorConstant.PROPERTY_CURRENT_DATE, dateToBeDisplayed);
-			DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
-			obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
-			// Convert s to ms
-			Date res = new Date(System.currentTimeMillis());
-			properties.put(SembientAggregatorConstant.PROPERTY_LAST_UPDATE, obj.format(res));
-		} else {
-			if (properties.containsKey(SembientAggregatorConstant.PROPERTY_CURRENT_DATE)) {
-				return;
-			}
-			properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
 		}
-	}
-
-	/**
-	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
-	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
-	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
-	 *
-	 * @param url to retrieve data from
-	 * @return JsonNode response body
-	 * @throws Exception if a communication error occurs
-	 */
-	private <T> T doGetWithRetry(String url, Class<T> clazz) throws Exception {
-		int retryAttempts = 0;
-		Exception lastError = null;
-
-		while (retryAttempts++ < 10 && serviceRunning) {
-			try {
-				return doGet(url, clazz);
-			} catch (CommandFailureException e) {
-				lastError = e;
-				if (e.getStatusCode() != 429) {
-					// Might be 401, 403 or any other error code here so the code will just get stuck
-					// cycling this failed request until it's fixed. So we need to skip this scenario.
-					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
-					break;
-				}
-			} catch (Exception e) {
-				lastError = e;
-				// if service is running, log error
-				if (serviceRunning) {
-					logger.error(String.format("Sembient API error while retrieving %s data", url), e);
-				}
-				break;
-			}
-			TimeUnit.MILLISECONDS.sleep(200);
-		}
-
-		if (retryAttempts == 10 && serviceRunning) {
-			// if we got here, all 10 attempts failed
-			logger.error(String.format("Failed to retrieve %s data", url), lastError);
-		}
-		return null;
 	}
 
 	/**
@@ -1493,9 +1429,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
 	 *
 	 * @param url to retrieve data from
+	 * @param value to be deleted
 	 * @throws Exception if a communication error occurs
 	 */
-	private void doDeleteWithRetry(String url) throws Exception {
+	private void doDeleteWithRetry(String url, String value) throws Exception {
 		int retryAttempts = 0;
 		Exception lastError = null;
 
@@ -1525,6 +1462,50 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
+		logger.error("Fail to delete region tag with status code 429, and value: " + value);
+		throw new ResourceNotReachableException("Too many request to the device, please try to delete region tag with value: " + value);
+	}
+
+	/**
+	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
+	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
+	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
+	 *
+	 * @param url to retrieve data from
+	 * @return JsonNode response body
+	 * @throws Exception if a communication error occurs
+	 */
+	private <T> T doGetWithRetry(String url, Class<T> clazz) throws Exception {
+		int retryAttempts = 0;
+		Exception lastError = null;
+
+		while (retryAttempts++ < SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
+			try {
+				return doGet(url, clazz);
+			} catch (CommandFailureException e) {
+				lastError = e;
+				if (e.getStatusCode() != 429) {
+					// Might be 401, 403 or any other error code here so the code will just get stuck
+					// cycling this failed request until it's fixed. So we need to skip this scenario.
+					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
+					break;
+				}
+			} catch (Exception e) {
+				lastError = e;
+				// if service is running, log error
+				if (serviceRunning) {
+					logger.error(String.format("Sembient API error while retrieving %s data", url), e);
+				}
+				break;
+			}
+			TimeUnit.MILLISECONDS.sleep(200);
+		}
+
+		if (retryAttempts == SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
+			// if we got here, all 10 attempts failed
+			logger.error(String.format("Failed to retrieve %s data", url), lastError);
+		}
+		return null;
 	}
 
 	/**
@@ -1541,7 +1522,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (StringUtils.isNotNullOrEmpty(regionNameFilter)) {
 				String[] regionNames = regionNameFilter.split(SembientAggregatorConstant.COMMA);
 				for (String regionName : regionNames) {
-					if (regionName.equals(region.getRegionName())) {
+					if (regionName.trim().equals(region.getRegionName())) {
 						isContinue = true;
 						break;
 					}

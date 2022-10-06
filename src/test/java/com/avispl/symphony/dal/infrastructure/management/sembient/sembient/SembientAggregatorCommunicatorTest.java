@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
+
+import javax.security.auth.login.FailedLoginException;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
+import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 
 @Tag("RealDevice")
 class SembientAggregatorCommunicatorTest {
@@ -120,35 +124,37 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertNotNull(properties.get(key + "RecentData"));
 	}
 
-//	/** 
-//	 * Test retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
-//	 * <p>
-//	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
-//	 */
-//	@Test
-//	void testRetrieveMultipleStatisticsWithSensorWhereAirQualityNoData() throws Exception {
-//		communicator.getMultipleStatistics();
-//		communicator.retrieveMultipleStatistics();
-//		Thread.sleep(30000);
-//		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-//		Map<String, String> properties = devices.get(0).getProperties();
-//		Assert.assertEquals("No data", properties.get("Sensor3005-AirQuality#Message"));
-//	}
+	/**
+	 * Test retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
+	 * <p>
+	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Air quality no data
+	 */
+	@Ignore
+	@Test
+	void testRetrieveMultipleStatisticsWithSensorWhereAirQualityNoData() throws Exception {
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+		Map<String, String> properties = devices.get(0).getProperties();
+		Assert.assertEquals("No data", properties.get("Sensor3005-AirQuality#Message"));
+	}
 
-//	/**
-//	 * Test retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
-//	 * <p>
-//	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
-//	 */
-//	@Test
-//	void testRetrieveMultipleStatisticsWithSensorWhereThermalNoData() throws Exception {
-//		communicator.getMultipleStatistics();
-//		communicator.retrieveMultipleStatistics();
-//		Thread.sleep(30000);
-//		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-//		Map<String, String> properties = devices.get(0).getProperties();
-//		Assert.assertEquals("No data", properties.get("Sensor3005-Thermal#Message"));
-//	}
+	/**
+	 * Test retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
+	 * <p>
+	 * Expect retrieveMultipleStatistics with aggregated device Sensor is Thermal no data
+	 */
+	@Test
+	@Ignore
+	void testRetrieveMultipleStatisticsWithSensorWhereThermalNoData() throws Exception {
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+		Map<String, String> properties = devices.get(0).getProperties();
+		Assert.assertEquals("No data", properties.get("Sensor3005-Thermal#Message"));
+	}
 
 	/**
 	 * Test retrieveMultipleStatistics with aggregated device Occupancy information group
@@ -218,7 +224,6 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testControlAggregatedDeviceWithCreateRegionTag() throws Exception {
-		// TODO
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
@@ -280,7 +285,6 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testControlAggregatedDeviceWithChangeRegionTag() throws Exception {
-		// TODO
 		testControlAggregatedDeviceWithCreateRegionTag();
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
@@ -307,7 +311,6 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testControlAggregatedDeviceWithOccupancyList() throws Exception {
-		// TODO
 		testControlAggregatedDeviceWithCreateRegionTag();
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
@@ -447,7 +450,7 @@ class SembientAggregatorCommunicatorTest {
 	 * Expect filter by Region type is Workstations successfully
 	 */
 	@Test
-	void testRegionFilterByName() throws Exception {
+	void testRegionFilterByType() throws Exception {
 		communicator.setRegionTypeFilter("Workstations");
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
@@ -463,6 +466,53 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertEquals("Test", stats.get("Buildings#Building01"));
 	}
 
+	/**
+	 * Test filter by Region names are Region_2, Region_1
+	 * <p>
+	 * Expect filter by Region names are Region_2, Region_1 successfully
+	 */
+	@Test
+	void testRegionFilterByName() throws Exception {
+		communicator.setRegionNameFilter("Region_2,Region_2,Region_1");
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+		Assert.assertEquals(2, devices.size());
+	}
+
+	/**
+	 * Test filter by Region names are Region_2, Region_1
+	 * <p>
+	 * Expect filter by Region names are Region_2, Region_1 successfully
+	 */
+	@Test
+	void testRegionFilterByNameCase2() throws Exception {
+		// Set name with space
+		communicator.setRegionNameFilter("Region_2 ,Region_2 , Region_1");
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+		Assert.assertEquals(2, devices.size());
+	}
+
+	/**
+	 * Test filter by Region names are region_2, region_1
+	 * <p>
+	 * Expect filter by Region names are Region_2, Region_1 successfully
+	 */
+	@Test
+	void testRegionFilterByNameCase3() throws Exception {
+		// Set name with spaces and lower case
+		communicator.setRegionNameFilter("region_2 , region_1");
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
+		// Expect 0 devices here because filter is case-sensitive
+		Assert.assertEquals(0, devices.size());
+	}
 
 	/**
 	 * Test filter by Region type is Workstations 01
@@ -470,7 +520,7 @@ class SembientAggregatorCommunicatorTest {
 	 * Expect filter by Region type is Workstations 01 with no aggregated device
 	 */
 	@Test
-	void testRegionFilterByNameNotExits() throws Exception {
+	void testRegionFilterByTypeNotExits() throws Exception {
 		communicator.setRegionTypeFilter("Workstations 01");
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
@@ -546,5 +596,52 @@ class SembientAggregatorCommunicatorTest {
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
 		communicator.retrieveMultipleStatistics();
 		Assert.assertNotNull(extendedStatistics.getStatistics().get("NextPollingInterval"));
+	}
+
+	// Negative cases
+
+	/**
+	 * Test negative case when creating tag
+	 *
+	 * @throws Exception When fail new tag is null/empty
+	 */
+	@Test()
+	void testCaseTagIsNull() throws Exception {
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		ControllableProperty controllableProperty = new ControllableProperty();
+		controllableProperty.setProperty("RegionTag#NewTag");
+		controllableProperty.setValue("");
+		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
+
+		Exception exception = Assert.assertThrows(ResourceNotReachableException.class, () -> {
+			communicator.controlProperty(controllableProperty);
+		});
+
+		String expectedMessage = "Cannot create new region tag with value is empty or null";
+		String actualMessage = exception.getMessage();
+
+		Assert.assertTrue(actualMessage.contains(expectedMessage));
+	}
+
+	/**
+	 * Test negative case when fail to log in
+	 *
+	 * @throws Exception when fail to log in
+	 */
+	@Test()
+	void testCaseLoginFail() throws Exception {
+		communicator.destroy();
+		communicator.setLogin("not-exist-account");
+		communicator.init();
+		Exception exception = Assert.assertThrows(FailedLoginException.class, () -> {
+			communicator.getMultipleStatistics();;
+		});
+		String expectedMessage = "Fail to login with username: not-exist-account, password: useforTMA";
+		String actualMessage = exception.getMessage();
+
+		Assert.assertTrue(actualMessage.contains(expectedMessage));
 	}
 }
