@@ -105,7 +105,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			mainloop:
 			while (inProgress) {
 				try {
-					TimeUnit.MILLISECONDS.sleep(500);
+					TimeUnit.MILLISECONDS.sleep(200);
 				} catch (InterruptedException e) {
 					// Ignore for now
 				}
@@ -162,7 +162,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 
 				do {
 					try {
-						TimeUnit.MILLISECONDS.sleep(500);
+						TimeUnit.MILLISECONDS.sleep(200);
 					} catch (InterruptedException e) {
 						if (!inProgress) {
 							break;
@@ -1518,7 +1518,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(500);
+			TimeUnit.MILLISECONDS.sleep(200);
 		}
 
 		if (retryAttempts == 10 && serviceRunning) {
