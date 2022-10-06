@@ -1103,6 +1103,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					// Set back to default value if aggregatedDeviceTagMap isn't update to the latest one.
 					aggregatedDeviceTagMap.put(deviceId, currentTag);
 				}
+			} else {
+				aggregatedDeviceTagMap.put(deviceId, currentTag);
 			}
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, tags, currentTag));
 			controls.add(createButton(properties, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
