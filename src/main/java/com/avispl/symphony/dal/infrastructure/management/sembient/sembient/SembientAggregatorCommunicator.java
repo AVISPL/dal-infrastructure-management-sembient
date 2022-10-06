@@ -1347,16 +1347,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			}
 			// Remove previous properties
-			properties.remove(SembientAggregatorConstant.REGION_TAG_CREATE);
-			properties.remove(SembientAggregatorConstant.PROPERTY_DELETE);
-			properties.remove(SembientAggregatorConstant.REGION_TAG_NEW_TAG);
-			properties.remove(SembientAggregatorConstant.PROPERTY_TAG);
+			properties.remove(SembientAggregatorConstant.PROPERTY_HOUR);
+			properties.remove(SembientAggregatorConstant.PROPERTY_CURRENT_DATE);
 			properties.remove(SembientAggregatorConstant.PROPERTY_LAST_UPDATE);
-			properties.remove(SembientAggregatorConstant.REGION + SembientAggregatorConstant.HASH + SembientAggregatorConstant.MESSAGE);
-			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_CREATE));
-			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
-			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
-			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
+			properties.remove(SembientAggregatorConstant.PROPERTY_MESSAGE);
+			properties.remove(SembientAggregatorConstant.PROPERTY_NUMBER_OF_OCCUPANCE);
+			properties.remove(SembientAggregatorConstant.PROPERTY_USAGE_TIME);
+			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_HOUR));
 			OccupancyData[] occupancyData = new OccupancyData[0];
 			for (OccupancyRegionResponse res : occupancyRegionResponses) {
 				if (regionName.equals(res.getRegionName())) {
@@ -1365,7 +1362,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			}
 			if (occupancyData.length == 0) {
-				properties.put(SembientAggregatorConstant.OCCUPANCY_LIST, "Sensor haven't collected occupancy data yet.");
+				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
 			}
 			// Set to 8 by default if user haven't changed the hour value.
 			String hourValue = SembientAggregatorConstant.DEFAULT_WORK_HOUR;
@@ -1398,7 +1395,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			Date res = new Date(System.currentTimeMillis());
 			properties.put(SembientAggregatorConstant.PROPERTY_LAST_UPDATE, obj.format(res));
 		} else {
-			if (properties.containsKey(SembientAggregatorConstant.REGION_TAG_CREATE)) {
+			if (properties.containsKey(SembientAggregatorConstant.PROPERTY_CURRENT_DATE)) {
 				return;
 			}
 			properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
@@ -1461,7 +1458,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int retryAttempts = 0;
 		Exception lastError = null;
 
-		while (retryAttempts++ < 4 && serviceRunning) {
+		while (retryAttempts++ < 10 && serviceRunning) {
 			try {
 				return doPut(url, null, clazz);
 			} catch (CommandFailureException e) {
@@ -1480,10 +1477,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(500);
+			TimeUnit.MILLISECONDS.sleep(200);
 		}
 
-		if (retryAttempts == 4 && serviceRunning) {
+		if (retryAttempts == 10 && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
@@ -1502,7 +1499,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int retryAttempts = 0;
 		Exception lastError = null;
 
-		while (retryAttempts++ < 4 && serviceRunning) {
+		while (retryAttempts++ < 10 && serviceRunning) {
 			try {
 				this.doDelete(url);
 			} catch (CommandFailureException e) {
@@ -1524,7 +1521,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			TimeUnit.MILLISECONDS.sleep(500);
 		}
 
-		if (retryAttempts == 4 && serviceRunning) {
+		if (retryAttempts == 10 && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
