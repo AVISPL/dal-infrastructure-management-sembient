@@ -17,6 +17,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,6 +40,7 @@ import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
+import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty.DropDown;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
@@ -600,16 +602,16 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								.append(newTag);
 						RegionTagWrapperControl createRegionTagWrapperControl = null;
 						try {
-							createRegionTagWrapperControl = this.doPut(createRequestBuilder.toString(),null, RegionTagWrapperControl.class);
+							createRegionTagWrapperControl = this.doPut(createRequestBuilder.toString(), null, RegionTagWrapperControl.class);
 						} catch (CommandFailureException e) {
-							logger.error("Fail to create with status code: "+e.getStatusCode()+", value: "+newTag, e);
+							logger.error("Fail to create with status code: " + e.getStatusCode() + ", value: " + newTag, e);
 							if (e.getStatusCode() == 429) {
 								throw new ResourceNotReachableException("Too many request, please try to create region tag with value: " + newTag + " later.");
 							} else {
 								throw new ResourceNotReachableException("Fail to create region tag with value: " + newTag);
 							}
 						} catch (Exception e) {
-							logger.error("Exception occur when creating region tag with value: "+ newTag, e);
+							logger.error("Exception occur when creating region tag with value: " + newTag, e);
 							throw new ResourceNotReachableException("Fail to create region tag with value: " + newTag);
 						}
 						if (createRegionTagWrapperControl != null) {
@@ -618,16 +620,19 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 										, createRequestBuilder.toString(), createRegionTagWrapperControl.toString());
 							}
 							lastNewTag.put(deviceId, SembientAggregatorConstant.EMPTY);
-							// Repopulate region tags group
-							controlFromCached.removeIf(
-									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
-							controlFromCached.removeIf(
-									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_CREATE));
+							// get old tags
+							List<String> newOptions = new ArrayList<>();
+							for (AdvancedControllableProperty control : controlFromCached) {
+								if (SembientAggregatorConstant.PROPERTY_TAG.equals(control.getName())) {
+									newOptions = new LinkedList<>(Arrays.asList(((DropDown) control.getType()).getOptions()));
+									break;
+								}
+							}
+							// add new created tag
+							newOptions.add(newTag);
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
-							controlFromCached.removeIf(
-									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
-							populateRegionTag(statFromCached, controlFromCached, deviceId);
+							controlFromCached.add(createDropdown(statFromCached, SembientAggregatorConstant.PROPERTY_TAG, newOptions, newOptions.get(0)));
 						} else {
 							logger.error("Error while creating region with status code: 429 and value " + newTag);
 							throw new ResourceNotReachableException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
@@ -642,24 +647,35 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								+ floorName + SembientAggregatorConstant.PARAM_REGION_NAME + regionName + SembientAggregatorConstant.PARAM_REGION_TAGS + valueToBeDelete;
 						try {
 							this.doDelete(deleteRequest);
-							controlFromCached.removeIf(
-									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
-							controlFromCached.removeIf(
-									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_CREATE));
+							// Get old tags
+							List<String> options = new ArrayList<>();
+							for (AdvancedControllableProperty control : controlFromCached) {
+								if (SembientAggregatorConstant.PROPERTY_TAG.equals(control.getName())) {
+									options = new LinkedList<>(Arrays.asList(((DropDown) control.getType()).getOptions()));
+									break;
+								}
+							}
+							// Remove deleted tags
+							options.remove(valueToBeDelete);
+							if (options.size() == 0) {
+								controlFromCached.removeIf(
+										advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
+								controlFromCached.removeIf(
+										advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
+								break;
+							}
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
-							controlFromCached.removeIf(
-									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
-							populateRegionTag(statFromCached, controlFromCached, deviceId);
+							controlFromCached.add(createDropdown(statFromCached, SembientAggregatorConstant.PROPERTY_TAG, options, options.get(0)));
 						} catch (CommandFailureException e) {
-							logger.error("Fail to delete with status code: "+e.getStatusCode()+", value: "+valueToBeDelete, e);
+							logger.error("Fail to delete with status code: " + e.getStatusCode() + ", value: " + valueToBeDelete, e);
 							if (e.getStatusCode() == 429) {
 								throw new ResourceNotReachableException("Too many request, please try to delete with value: " + valueToBeDelete + " later.");
 							} else {
 								throw new ResourceNotReachableException("Fail to delete region tag with value: " + valueToBeDelete);
 							}
 						} catch (Exception e) {
-							logger.error("Exception occur when deleting region tag with value: "+ valueToBeDelete, e);
+							logger.error("Exception occur when deleting region tag with value: " + valueToBeDelete, e);
 							throw new ResourceNotReachableException("Fail to delete region tag with value: " + valueToBeDelete);
 						}
 						break;
@@ -734,7 +750,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					String[] floorNames = buildingResponse.getFloors();
 					// Filter by floors
 					newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.BUILDING_ID, buildingID);
-					newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.ADDRESS, buildingResponse.getAddress());
+					newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + SembientAggregatorConstant.HASH + SembientAggregatorConstant.ADDRESS,
+							buildingResponse.getAddress());
 					if (StringUtils.isNotNullOrEmpty(floorFilter)) {
 						String[] floorFilters = floorFilter.split(SembientAggregatorConstant.COMMA);
 						int i = 0;
