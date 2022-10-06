@@ -76,7 +76,9 @@ public class SembientAggregatorConstant {
 	public static final String PM_25_VALUE_MICROMET = "PM25Value(micromet)";
 	public static final long MINUTE_TO_MS = 60000L;
 	public static final String NEXT_POLLING_INTERVAL = "NextPollingInterval";
-	public static final String PROPERTY_LAST_UPDATE = "OccupancyList#LastUpdate";
+	public static final int MAXIMUM_RETRY = 10;
+	public static final int MAX_NO_THREADS = 8;
+	public static final String STATUS_CODE_401 = "401";
 	// Parameter constants
 	public static final String PARAM_REGION_NAME = "?regionName=";
 	public static final String PARAM_REGION_TAGS = "&regionTags=";
