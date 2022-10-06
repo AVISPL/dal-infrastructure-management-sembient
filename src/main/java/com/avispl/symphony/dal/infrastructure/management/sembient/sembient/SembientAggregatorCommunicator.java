@@ -598,7 +598,20 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						createRequestBuilder.append(SembientAggregatorConstant.COMMAND_SPACE_TAGS).append(loginResponse.getCustomerId()).append(SembientAggregatorConstant.SLASH).append(buildingName)
 								.append(SembientAggregatorConstant.SLASH).append(floorName).append(SembientAggregatorConstant.PARAM_REGION_NAME).append(regionName).append(SembientAggregatorConstant.PARAM_REGION_TAGS)
 								.append(newTag);
-						RegionTagWrapperControl createRegionTagWrapperControl = this.doPutWithRetry(createRequestBuilder.toString(), RegionTagWrapperControl.class);
+						RegionTagWrapperControl createRegionTagWrapperControl = null;
+						try {
+							createRegionTagWrapperControl = this.doPut(createRequestBuilder.toString(),null, RegionTagWrapperControl.class);
+						} catch (CommandFailureException e) {
+							logger.error("Fail to create with status code: "+e.getStatusCode()+", value: "+newTag, e);
+							if (e.getStatusCode() == 429) {
+								throw new ResourceNotReachableException("Too many request, please try to create region tag with value: " + newTag + " later.");
+							} else {
+								throw new ResourceNotReachableException("Fail to create region tag with value: " + newTag);
+							}
+						} catch (Exception e) {
+							logger.error("Exception occur when creating region tag with value: "+ newTag, e);
+							throw new ResourceNotReachableException("Fail to create region tag with value: " + newTag);
+						}
 						if (createRegionTagWrapperControl != null) {
 							if (!SembientAggregatorConstant.STATUS_CODE_200.equals(createRegionTagWrapperControl.getStatusCode())) {
 								throw new CommandFailureException("Fail to create region with value is: " + controllableProperty.getValue()
@@ -621,14 +634,14 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						}
 						break;
 					case SembientAggregatorConstant.LABEL_DELETE:
-						String valueToBeDelete = statFromCached.get(SembientAggregatorConstant.PROPERTY_TAG);
+						String valueToBeDelete = aggregatedDeviceTagMap.get(deviceId);
 						if (StringUtils.isNullOrEmpty(valueToBeDelete)) {
 							throw new ResourceNotReachableException("Tag dropdowns value cannot be empty.");
 						}
 						String deleteRequest = SembientAggregatorConstant.COMMAND_SPACE_TAGS + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingName + SembientAggregatorConstant.SLASH
 								+ floorName + SembientAggregatorConstant.PARAM_REGION_NAME + regionName + SembientAggregatorConstant.PARAM_REGION_TAGS + valueToBeDelete;
 						try {
-							this.doDeleteWithRetry(deleteRequest, valueToBeDelete);
+							this.doDelete(deleteRequest);
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
 							controlFromCached.removeIf(
@@ -638,12 +651,16 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
 							populateRegionTag(statFromCached, controlFromCached, deviceId);
-						} catch (ResourceNotReachableException resourceNotReachableException) {
-							// This exception is coming from the doDeleteWithRetry method
-							throw resourceNotReachableException;
+						} catch (CommandFailureException e) {
+							logger.error("Fail to delete with status code: "+e.getStatusCode()+", value: "+valueToBeDelete, e);
+							if (e.getStatusCode() == 429) {
+								throw new ResourceNotReachableException("Too many request, please try to delete with value: " + valueToBeDelete + " later.");
+							} else {
+								throw new ResourceNotReachableException("Fail to delete region tag with value: " + valueToBeDelete);
+							}
 						} catch (Exception e) {
-							throw new CommandFailureException("Fail to delete region with value is: " + valueToBeDelete
-									, deleteRequest, null, e);
+							logger.error("Exception occur when deleting region tag with value: "+ valueToBeDelete, e);
+							throw new ResourceNotReachableException("Fail to delete region tag with value: " + valueToBeDelete);
 						}
 						break;
 					default:
@@ -1378,83 +1395,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_HOUR, values, hourValue));
 			properties.put(SembientAggregatorConstant.PROPERTY_CURRENT_DATE, dateToBeDisplayed);
 		}
-	}
-
-	/**
-	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
-	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
-	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
-	 *
-	 * @param url to retrieve data from
-	 * @param clazz Class instance that will be converted to
-	 * @return T instance of the input class
-	 * @throws Exception if a communication error occurs
-	 */
-	private <T> T doPutWithRetry(String url, Class<T> clazz) throws Exception {
-		int retryAttempts = 0;
-		Exception lastError = null;
-
-		while (retryAttempts++ < 10) {
-			try {
-				return doPut(url, null, clazz);
-			} catch (CommandFailureException e) {
-				lastError = e;
-				if (e.getStatusCode() != 429) {
-					// Might be 401, 403 or any other error code here so the code will just get stuck
-					// cycling this failed request until it's fixed. So we need to skip this scenario.
-					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
-					break;
-				}
-			} catch (Exception e) {
-				lastError = e;
-				break;
-			}
-		}
-
-		if (retryAttempts == 10) {
-			// if we got here, all 10 attempts failed
-			logger.error(String.format("Failed to retrieve %s data", url), lastError);
-		}
-		return null;
-	}
-
-	/**
-	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
-	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
-	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
-	 *
-	 * @param url to retrieve data from
-	 * @param value to be deleted
-	 * @throws Exception if a communication error occurs
-	 */
-	private void doDeleteWithRetry(String url, String value) throws Exception {
-		int retryAttempts = 0;
-		Exception lastError = null;
-
-		while (retryAttempts++ < 10) {
-			try {
-				this.doDelete(url);
-			} catch (CommandFailureException e) {
-				lastError = e;
-				if (e.getStatusCode() != 429) {
-					// Might be 401, 403 or any other error code here so the code will just get stuck
-					// cycling this failed request until it's fixed. So we need to skip this scenario.
-					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
-					break;
-				}
-			} catch (Exception e) {
-				lastError = e;
-				logger.error(String.format("Sembient API error while retrieving %s data", url), e);
-				break;
-			}
-		}
-
-		if (retryAttempts == 10) {
-			// if we got here, all 10 attempts failed
-			logger.error(String.format("Failed to retrieve %s data", url), lastError);
-		}
-		logger.error("Fail to delete region tag with status code 429, and value: " + value);
-		throw new ResourceNotReachableException("Too many request to the device, please try to delete region tag with value: " + value);
 	}
 
 	/**
