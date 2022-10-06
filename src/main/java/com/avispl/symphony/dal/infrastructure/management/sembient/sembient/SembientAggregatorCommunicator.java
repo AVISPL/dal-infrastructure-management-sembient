@@ -632,7 +632,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							newOptions.add(newTag);
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
+							controlFromCached.removeIf(
+									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
 							controlFromCached.add(createDropdown(statFromCached, SembientAggregatorConstant.PROPERTY_TAG, newOptions, newOptions.get(0)));
+							controlFromCached.add(createText(statFromCached, SembientAggregatorConstant.REGION_TAG_NEW_TAG, lastNewTag.get(deviceId)));
 						} else {
 							logger.error("Error while creating region with status code: 429 and value " + newTag);
 							throw new ResourceNotReachableException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
