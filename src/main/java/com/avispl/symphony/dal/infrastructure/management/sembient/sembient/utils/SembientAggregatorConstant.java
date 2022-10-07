@@ -22,6 +22,7 @@ public class SembientAggregatorConstant {
 	public static final String SLASH = "/";
 	public static final String YYYY_MM_DD = "yyyy-MM-dd";
 	public static final String UTC_TIMEZONE = "UTC";
+	public static final String SPACE = " ";
 	public static final String DASH = "-";
 	public static final String LABEL_CREATE = "Create";
 	public static final String AIR_QUALITY = "AirQuality";
