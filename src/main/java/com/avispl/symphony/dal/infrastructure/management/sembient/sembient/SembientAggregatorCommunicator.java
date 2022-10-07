@@ -83,7 +83,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 
 	/**
 	 * Process is running constantly and triggers collecting data from Sembient API endpoints
-	 * - Building & floor information will be fetched every {@link SembientAggregatorCommunicator#pollingInterval}
+	 * - Building & floor information will be fetched every {@link SembientAggregatorCommunicator#refreshInterval}
 	 *
 	 * @author Kevin
 	 * @since 1.0.0
@@ -193,6 +193,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		}
 	}
 
+	public static final int INT = 10;
+
 	/**
 	 * Update the status of the device.
 	 * The device is considered as paused if did not receive any retrieveMultipleStatistics()
@@ -225,7 +227,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private volatile boolean devicePaused = true;
 
 	/**
-	 * Indicates whether a building and floor information(renew every {@link SembientAggregatorCommunicator#pollingInterval} minutes) is latest or not
+	 * Indicates whether a building and floor information(renew every {@link SembientAggregatorCommunicator#refreshInterval} minutes) is latest or not
 	 */
 	private volatile boolean latestBuildingAndFloorData = false;
 
@@ -281,9 +283,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private static final long defaultMetaDataTimeout = 60 * 1000 / 2;
 
 	/**
-	 * Device metadata retrieval timeout. The general devices list is retrieved once during this time period.
+	 * Device metadata retrieval timeout. The general regions & building & floors list are retrieved once during this time period.
 	 */
-	private long deviceMetaDataRetrievalTimeout = 60 * 1000;
+	private long deviceMetaDataRetrievalTimeout = SembientAggregatorConstant.DEFAULT_REFRESH_INTERVAL * 60 * 1000;
 
 	/**
 	 * Time period within which the device metadata (basic devices' information) cannot be refreshed.
@@ -358,7 +360,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * Property that define when will the adapter fetch new data of building and floor -
 	 * then store to {@link SembientAggregatorCommunicator#cachedBuildings}
 	 */
-	private String pollingInterval;
+	private String refreshInterval;
 
 	/**
 	 * Retrieves {@link #buildingFilter}
@@ -433,21 +435,21 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	}
 
 	/**
-	 * Retrieves {@link #pollingInterval}
+	 * Retrieves {@link #refreshInterval}
 	 *
-	 * @return value of {@link #pollingInterval}
+	 * @return value of {@link #refreshInterval}
 	 */
-	public String getPollingInterval() {
-		return pollingInterval;
+	public String getRefreshInterval() {
+		return refreshInterval;
 	}
 
 	/**
-	 * Sets {@link #pollingInterval} value
+	 * Sets {@link #refreshInterval} value
 	 *
-	 * @param pollingInterval new value of {@link #pollingInterval}
+	 * @param refreshInterval new value of {@link #refreshInterval}
 	 */
-	public void setPollingInterval(String pollingInterval) {
-		this.pollingInterval = pollingInterval;
+	public void setRefreshInterval(String refreshInterval) {
+		this.refreshInterval = refreshInterval;
 	}
 
 	/**
@@ -493,6 +495,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	@Override
 	protected void internalInit() throws Exception {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Internal init is called");
+		}
 		this.setTrustAllCertificates(true);
 		// Init thread
 		executorService = Executors.newFixedThreadPool(SembientAggregatorConstant.MAX_NO_THREADS);
@@ -528,6 +533,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		devicesExecutionPool.clear();
 		aggregatedDeviceHourMap.clear();
 		aggregatedDeviceTagMap.clear();
+		cachedBuildings.clear();
 		lastNewTag.clear();
 		aggregatedDeviceSensor.clear();
 		aggregatedDevices.clear();
@@ -591,7 +597,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							}
 						}
 						break;
-					case SembientAggregatorConstant.LABEL_CREATE:
+					case SembientAggregatorConstant.CREATE_NEW_TAG:
 						String newTag = lastNewTag.get(deviceId);
 						if (StringUtils.isNullOrEmpty(newTag) || StringUtils.isNullOrEmpty(newTag.trim())) {
 							throw new ResourceNotReachableException("NewTag value cannot be empty or or only space characters.");
@@ -650,7 +656,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							throw new ResourceNotReachableException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
 						}
 						break;
-					case SembientAggregatorConstant.LABEL_DELETE:
+					case SembientAggregatorConstant.DELETE_SELECTED_TAG:
 						String valueToBeDelete = aggregatedDeviceTagMap.get(deviceId);
 						if (StringUtils.isNullOrEmpty(valueToBeDelete)) {
 							throw new ResourceNotReachableException("Tag dropdowns value cannot be empty.");
@@ -735,10 +741,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			sembientLogin();
 			// Fetch building
 			fetchBuildings();
-			// Put NextPollingInterval properties to stats map
+			// Put NextRefreshInterval properties to stats map
 			DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
 			obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
-			newStatistics.put(SembientAggregatorConstant.NEXT_POLLING_INTERVAL, obj.format(validDeviceMetaDataRetrievalPeriodTimestamp));
+			newStatistics.put(SembientAggregatorConstant.NEXT_REFRESH_INTERVAL, obj.format(validDeviceMetaDataRetrievalPeriodTimestamp));
 			if (cachedBuildings != null && cachedBuildings.size() != 0) {
 				BuildingResponse buildingResponse = null;
 				if (StringUtils.isNotNullOrEmpty(buildingFilter)) {
@@ -947,12 +953,16 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			return;
 		}
 		// Apply polling interval
-		if (StringUtils.isNotNullOrEmpty(pollingInterval)) {
+		if (StringUtils.isNotNullOrEmpty(refreshInterval)) {
 			long interval;
 			try {
-				interval = Integer.parseInt(pollingInterval) * SembientAggregatorConstant.MINUTE_TO_MS;
+				int pollingInInt = Integer.parseInt(refreshInterval);
+				if (pollingInInt < SembientAggregatorConstant.DEFAULT_REFRESH_INTERVAL) {
+					pollingInInt = SembientAggregatorConstant.DEFAULT_REFRESH_INTERVAL;
+				}
+				interval = pollingInInt * SembientAggregatorConstant.MINUTE_TO_MS;
 			} catch (Exception e) {
-				logger.error("Invalid format, pollingInterval should be integer.", e);
+				logger.error("Invalid format, refreshInterval should be integer.", e);
 				interval = deviceMetaDataRetrievalTimeout;
 			}
 			validDeviceMetaDataRetrievalPeriodTimestamp = currentTimestamp + interval;
@@ -1502,7 +1512,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			// For instance: BuildingA-Floor1-Region1
 			aggregatedDevice.setDeviceId(buildingName + SembientAggregatorConstant.DASH + floorName + SembientAggregatorConstant.DASH + region.getRegionName());
 			aggregatedDevice.setCategory(SembientAggregatorConstant.REGION);
-			aggregatedDevice.setDeviceModel(region.getRegionType());
+			aggregatedDevice.setDeviceType(region.getRegionType());
 			aggregatedDevice.setDeviceOnline(true);
 			aggregatedDevice.setDeviceName(region.getRegionName());
 			if (region.getSensors() != null) {

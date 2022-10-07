@@ -204,9 +204,9 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("", properties.get("RegionTag#NewTag"));
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
-		controllableProperty.setProperty("RegionTag#NewTag");
+		controllableProperty.setProperty("RegionTags#NewTag");
 		controllableProperty.setValue("res3");
 		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
@@ -214,7 +214,7 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
 		properties = devices.get(0).getProperties();
-		Assert.assertEquals("res3", properties.get("RegionTag#NewTag"));
+		Assert.assertEquals("res3", properties.get("RegionTags#NewTag"));
 	}
 
 	/**
@@ -229,9 +229,9 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("", properties.get("RegionTag#NewTag"));
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
-		controllableProperty.setProperty("RegionTag#NewTag");
+		controllableProperty.setProperty("RegionTags#NewTag");
 		controllableProperty.setValue("res3");
 		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
@@ -240,8 +240,8 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
 		properties = devices.get(0).getProperties();
-		Assert.assertEquals("res3", properties.get("RegionTag#NewTag"));
-		controllableProperty.setProperty("RegionTag#Create");
+		Assert.assertEquals("res3", properties.get("RegionTags#NewTag"));
+		controllableProperty.setProperty("RegionTags#CreateNewTag");
 		controllableProperty.setValue("1");
 		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
@@ -261,11 +261,10 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("", properties.get("RegionTag#NewTag"));
-		Assert.assertEquals("res3", properties.get("RegionTag#Tag"));
+		Map<String, String> properties = devices.get(1).getProperties();
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
-		controllableProperty.setProperty("RegionTag#Delete");
+		controllableProperty.setProperty("RegionTags#DeleteSelectedTag");
 		controllableProperty.setValue("1");
 		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
@@ -274,8 +273,8 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
 		properties = devices.get(0).getProperties();
-		Assert.assertEquals("", properties.get("RegionTag#NewTag"));
-		Assert.assertEquals(null, properties.get("RegionTag#Tag"));
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
+		Assert.assertEquals(null, properties.get("RegionTags#Tag"));
 	}
 
 	/**
@@ -291,17 +290,17 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("", properties.get("RegionTag#NewTag"));
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
-		controllableProperty.setProperty("RegionTag#Tag");
+		controllableProperty.setProperty("RegionTags#Tag");
 		controllableProperty.setValue("res2");
 		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
 		communicator.getMultipleStatistics();
 		devices = communicator.retrieveMultipleStatistics();
 		properties = devices.get(0).getProperties();
-		Assert.assertEquals("", properties.get("RegionTag#NewTag"));
-		Assert.assertEquals("res2", properties.get("RegionTag#Tag"));
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
+		Assert.assertEquals("res2", properties.get("RegionTags#Tag"));
 	}
 
 	/**
@@ -583,19 +582,19 @@ class SembientAggregatorCommunicatorTest {
 	}
 
 	/**
-	 * Test polling interval
+	 * Test refresh interval
 	 *
 	 * @throws Exception if fail to getMultipleStatistics, retrieveMultipleStatistics
 	 */
 	@Test
 	void testPollingInterval() throws Exception {
-		communicator.setPollingInterval("1");
+		communicator.setRefreshInterval("");
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
 		communicator.retrieveMultipleStatistics();
-		Assert.assertNotNull(extendedStatistics.getStatistics().get("NextPollingInterval"));
+		Assert.assertNotNull(extendedStatistics.getStatistics().get("NextRefreshInterval"));
 	}
 
 	// Negative cases
@@ -612,7 +611,7 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		ControllableProperty controllableProperty = new ControllableProperty();
-		controllableProperty.setProperty("RegionTag#NewTag");
+		controllableProperty.setProperty("RegionTags#NewTag");
 		controllableProperty.setValue("");
 		controllableProperty.setDeviceId("TEST-1st floor-Region_2");
 

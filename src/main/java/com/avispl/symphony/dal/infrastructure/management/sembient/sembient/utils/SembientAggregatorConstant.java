@@ -22,7 +22,8 @@ public class SembientAggregatorConstant {
 	public static final String SLASH = "/";
 	public static final String YYYY_MM_DD = "yyyy-MM-dd";
 	public static final String UTC_TIMEZONE = "UTC";
-	public static final String SPACE = " ";
+	public static final String CREATE_NEW_TAG = "CreateNewTag";
+	public static final String DELETE_SELECTED_TAG = "DeleteSelectedTag";
 	public static final String DASH = "-";
 	public static final String LABEL_CREATE = "Create";
 	public static final String AIR_QUALITY = "AirQuality";
@@ -31,13 +32,14 @@ public class SembientAggregatorConstant {
 	public static final String HASH = "#";
 	public static final String OCCUPANCY_LIST = "OccupancyList";
 	public static final String HOUR = "Hour";
-	public static final String REGION_TAG_NEW_TAG = "RegionTag#NewTag";
-	public static final String REGION_TAG_CREATE = "RegionTag#Create";
+	public static final int DEFAULT_REFRESH_INTERVAL = 10;
+	public static final String REGION_TAG_NEW_TAG = "RegionTags#NewTag";
+	public static final String REGION_TAG_CREATE = "RegionTags#CreateNewTag";
 	public static final String LABEL_PRESSED_CREATING = "Creating";
 	public static final String LABEL_PRESSED_DELETING = "Deleting";
 	public static final String LABEL_DELETE = "Delete";
-	public static final String PROPERTY_TAG = "RegionTag#Tag";
-	public static final String PROPERTY_DELETE = "RegionTag#Delete";
+	public static final String PROPERTY_TAG = "RegionTags#Tag";
+	public static final String PROPERTY_DELETE = "RegionTags#DeleteSelectedTag";
 	public static final String THERMAL = "Thermal";
 	public static final String NO_DATA = "No data";
 	public static final String PROPERTY_MESSAGE = "OccupancyList#Message";
@@ -59,7 +61,7 @@ public class SembientAggregatorConstant {
 	public static final String CURRENT_FILTER_BUILDING = "CurrentFilterBuilding";
 	public static final String NO_BUILDING_FOUND = "No building found";
 	public static final String NEW_TAG = "NewTag";
-	public static final String REGION_TAG = "RegionTag";
+	public static final String REGION_TAG = "RegionTags";
 	public static final String TAG = "Tag";
 	public static final String REGION = "Region";
 	public static final String DEFAULT_WORK_HOUR = "8";
@@ -76,7 +78,7 @@ public class SembientAggregatorConstant {
 	public static final String TVOCVALUE_MICROGRAM = "TVOCValue(microgram/m3)";
 	public static final String PM_25_VALUE_MICROMET = "PM25Value(micromet)";
 	public static final long MINUTE_TO_MS = 60000L;
-	public static final String NEXT_POLLING_INTERVAL = "NextPollingInterval";
+	public static final String NEXT_REFRESH_INTERVAL = "NextRefreshInterval";
 	public static final int MAXIMUM_RETRY = 10;
 	public static final int MAX_NO_THREADS = 8;
 	public static final String STATUS_CODE_401 = "401";
