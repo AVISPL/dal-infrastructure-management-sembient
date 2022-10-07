@@ -567,8 +567,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				switch (propertyName) {
 					case SembientAggregatorConstant.NEW_TAG:
 						String newTagValue = (String) controllableProperty.getValue();
-						if (StringUtils.isNullOrEmpty(newTagValue)) {
-							throw new ResourceNotReachableException("Cannot create new region tag with value is empty or null");
+						if (StringUtils.isNullOrEmpty(newTagValue) || StringUtils.isNullOrEmpty(newTagValue.trim())) {
+							throw new ResourceNotReachableException("Cannot create new region tag with value is empty or null or only space character.");
 						}
 						lastNewTag.put(deviceId, (String) controllableProperty.getValue());
 						statFromCached.put(SembientAggregatorConstant.REGION_TAG_NEW_TAG, (String) controllableProperty.getValue());
@@ -593,8 +593,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						break;
 					case SembientAggregatorConstant.LABEL_CREATE:
 						String newTag = lastNewTag.get(deviceId);
-						if (StringUtils.isNullOrEmpty(newTag)) {
-							throw new ResourceNotReachableException("NewTag value cannot be empty.");
+						if (StringUtils.isNullOrEmpty(newTag) || StringUtils.isNullOrEmpty(newTag.trim())) {
+							throw new ResourceNotReachableException("NewTag value cannot be empty or or only space characters.");
 						}
 						StringBuilder createRequestBuilder = new StringBuilder();
 						createRequestBuilder.append(SembientAggregatorConstant.COMMAND_SPACE_TAGS).append(loginResponse.getCustomerId()).append(SembientAggregatorConstant.SLASH).append(buildingName)
@@ -629,13 +629,22 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 								}
 							}
 							// add new created tag
-							newOptions.add(newTag);
+							if (!newOptions.contains(newTag)) {
+								newOptions.add(newTag);
+							}
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
+							controlFromCached.removeIf(
+									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
+							statFromCached.remove(SembientAggregatorConstant.PROPERTY_TAG);
+							statFromCached.remove(SembientAggregatorConstant.REGION_TAG_NEW_TAG);
+							statFromCached.remove(SembientAggregatorConstant.PROPERTY_DELETE);
+							aggregatedDeviceTagMap.put(deviceId, newOptions.get(0));
 							controlFromCached.add(createDropdown(statFromCached, SembientAggregatorConstant.PROPERTY_TAG, newOptions, newOptions.get(0)));
-							controlFromCached.add(createText(statFromCached, SembientAggregatorConstant.REGION_TAG_NEW_TAG, lastNewTag.get(deviceId)));
+							controlFromCached.add(createButton(statFromCached, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
+							controlFromCached.add(createText(statFromCached, SembientAggregatorConstant.REGION_TAG_NEW_TAG, SembientAggregatorConstant.EMPTY));
 						} else {
 							logger.error("Error while creating region with status code: 429 and value " + newTag);
 							throw new ResourceNotReachableException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
@@ -663,12 +672,16 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							if (options.size() == 0) {
 								controlFromCached.removeIf(
 										advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
+								statFromCached.remove(SembientAggregatorConstant.PROPERTY_DELETE);
 								controlFromCached.removeIf(
 										advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
+								statFromCached.remove(SembientAggregatorConstant.PROPERTY_TAG);
 								break;
 							}
 							controlFromCached.removeIf(
 									advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
+							statFromCached.remove(SembientAggregatorConstant.PROPERTY_TAG);
+							aggregatedDeviceTagMap.put(deviceId, options.get(0));
 							controlFromCached.add(createDropdown(statFromCached, SembientAggregatorConstant.PROPERTY_TAG, options, options.get(0)));
 						} catch (CommandFailureException e) {
 							logger.error("Fail to delete with status code: " + e.getStatusCode() + ", value: " + valueToBeDelete, e);
