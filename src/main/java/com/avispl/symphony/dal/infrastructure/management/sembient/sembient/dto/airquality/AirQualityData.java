@@ -3,6 +3,8 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.airquality;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * AirQualityData class - Provide some information relating to air quality in a specific region
  * <ol>
@@ -16,6 +18,7 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
  * Created on 9/30/2022
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AirQualityData {
 	private String co2;
 	private String tvoc;
