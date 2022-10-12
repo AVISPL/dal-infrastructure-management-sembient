@@ -1550,7 +1550,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						.average()
 						.orElse(Double.NaN);
 				double averageHumidity = Arrays.stream(thermals)
-						.mapToDouble(ThermalData::getTemperature)
+						.mapToDouble(ThermalData::getHumidity)
 						.average()
 						.orElse(Double.NaN);
 				int latestThermal = thermals[thermals.length - 1].getTemperature();
@@ -1567,12 +1567,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				properties.put(sensorLatestTemperatureProperty, String.valueOf(latestThermal));
 				properties.put(sensorMaxTemperatureProperty, String.valueOf(maxThermal));
 				properties.put(sensorMinTemperatureProperty, String.valueOf(minThermal));
-				properties.put(sensorAvgTemperatureProperty, String.valueOf(averageThermal));
+				properties.put(sensorAvgTemperatureProperty, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, averageThermal));
 				// Humidity
 				properties.put(sensorLatestHumidityProperty, String.valueOf(latestHumidity));
 				properties.put(sensorMaxHumidityProperty, String.valueOf(maxHumidity));
 				properties.put(sensorMinHumidityProperty, String.valueOf(minHumidity));
-				properties.put(sensorAvgHumidityProperty, String.valueOf(averageHumidity));
+				properties.put(sensorAvgHumidityProperty, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, averageHumidity));
 				DateFormat obj = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
 				obj.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
 				// Convert s to ms

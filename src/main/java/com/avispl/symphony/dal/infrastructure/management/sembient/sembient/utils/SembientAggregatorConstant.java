@@ -12,22 +12,6 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.util
  */
 public class SembientAggregatorConstant {
 
-	public static final String BUILDING_NAME = "BuildingName";
-	public static final String FLOOR_NAME = "FloorName";
-	public static final String REGIONS = "Regions";
-	public static final String CAPACITY = "Capacity";
-	public static final String REGION_TYPE = "RegionType";
-	public static final String TEMPERATURE_AVG_F = "TemperatureAvg(F)";
-	public static final String TEMPERATURE_MAX_F = "TemperatureMax(F)";
-	public static final String TEMPERATURE_MIN_F = "TemperatureMin(F)";
-	public static final String HUMIDITY_AVG = "HumidityAvg(%)";
-	public static final String HUMIDITY_MAX = "HumidityMax(%)";
-	public static final String HUMIDITY_MIN = "HumidityMin(%)";
-	public static final String FROM_TIME = "FromTime";
-	public static final String TO_TIME = "ToTime";
-	public static final String NEXT_POLLING_CYCLE = "NextPollingCycle";
-	public static final String FLOAT_WITH_TWO_DECIMAL = "%.2f";
-
 	/**
 	 * private constructor to prevent instance initialization
 	 */
@@ -123,4 +107,19 @@ public class SembientAggregatorConstant {
 	public static final String COMMAND_IAQ_TIMESERIES = "/v3.1/iaq/timeseries/";
 	public static final String COMMAND_THERMAL_TIMESERIES = "/v3.1/thermal/timeseries/";
 	public static final String COMMAND_OCCUPANCY_TIMESERIES = "/v3.1/occupancy/timeseries/";
+	public static final String BUILDING_NAME = "BuildingName";
+	public static final String FLOOR_NAME = "FloorName";
+	public static final String REGIONS = "Regions";
+	public static final String CAPACITY = "Capacity";
+	public static final String REGION_TYPE = "RegionType";
+	public static final String TEMPERATURE_AVG_F = "TemperatureAvg(F)";
+	public static final String TEMPERATURE_MAX_F = "TemperatureMax(F)";
+	public static final String TEMPERATURE_MIN_F = "TemperatureMin(F)";
+	public static final String HUMIDITY_AVG = "HumidityAvg(%)";
+	public static final String HUMIDITY_MAX = "HumidityMax(%)";
+	public static final String HUMIDITY_MIN = "HumidityMin(%)";
+	public static final String FROM_TIME = "FromTime";
+	public static final String TO_TIME = "ToTime";
+	public static final String NEXT_POLLING_CYCLE = "NextPollingCycle";
+	public static final String FLOAT_WITH_TWO_DECIMAL = "%.2f";
 }
