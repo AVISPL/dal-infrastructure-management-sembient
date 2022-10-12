@@ -23,6 +23,9 @@ public class AirQualityWrapper {
     @JsonAlias("body")
     private AirQualitySensorWrapper airQualitySensorWrapper;
 
+//    @JsonAlias("body")
+//    private ErrorResponse errorResponse;
+
     /**
      * Retrieves {@link #statusCode}
      *

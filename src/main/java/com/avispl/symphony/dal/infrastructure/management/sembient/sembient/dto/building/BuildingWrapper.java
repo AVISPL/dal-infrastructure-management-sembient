@@ -6,6 +6,7 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
 import java.util.Arrays;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * Building wrapper class - A class that provide information about:
@@ -18,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
  * Created on 9/30/2022
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BuildingWrapper {
 	private String statusCode;
 	@JsonAlias("body")

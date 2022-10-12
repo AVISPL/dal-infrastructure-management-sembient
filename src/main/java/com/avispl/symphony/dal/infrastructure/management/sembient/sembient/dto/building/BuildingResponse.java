@@ -5,6 +5,8 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
 
 import java.util.Arrays;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * BuildingResponse class - A class contain information a building(id, name, address), list of floors, list of types inside this region
  *
@@ -12,6 +14,7 @@ import java.util.Arrays;
  * Created on 9/30/2022
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BuildingResponse {
 	private String buildingID;
 	private String buildingName;

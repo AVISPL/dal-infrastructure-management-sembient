@@ -3,6 +3,8 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.thermal;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * ThermalData class - A class contain information of thermal:
  * <ol>
@@ -15,9 +17,10 @@ package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.
  * Created on 9/30/2022
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ThermalData {
-	private String temperature;
-	private String humidity;
+	private int temperature;
+	private int humidity;
 	private Long timestamp;
 
 	/**
@@ -25,7 +28,7 @@ public class ThermalData {
 	 *
 	 * @return value of {@link #temperature}
 	 */
-	public String getTemperature() {
+	public int getTemperature() {
 		return temperature;
 	}
 
@@ -34,7 +37,7 @@ public class ThermalData {
 	 *
 	 * @param temperature new value of {@link #temperature}
 	 */
-	public void setTemperature(String temperature) {
+	public void setTemperature(int temperature) {
 		this.temperature = temperature;
 	}
 
@@ -43,7 +46,7 @@ public class ThermalData {
 	 *
 	 * @return value of {@link #humidity}
 	 */
-	public String getHumidity() {
+	public int getHumidity() {
 		return humidity;
 	}
 
@@ -52,7 +55,7 @@ public class ThermalData {
 	 *
 	 * @param humidity new value of {@link #humidity}
 	 */
-	public void setHumidity(String humidity) {
+	public void setHumidity(int humidity) {
 		this.humidity = humidity;
 	}
 
