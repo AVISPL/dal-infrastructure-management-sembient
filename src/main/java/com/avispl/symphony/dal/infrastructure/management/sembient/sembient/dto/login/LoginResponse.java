@@ -4,6 +4,7 @@
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.login;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * LoginResponse class - A class contain information about:
@@ -18,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
  * Created on 9/30/2022
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LoginResponse {
 	private int exp;
 	private long expirationTime;
