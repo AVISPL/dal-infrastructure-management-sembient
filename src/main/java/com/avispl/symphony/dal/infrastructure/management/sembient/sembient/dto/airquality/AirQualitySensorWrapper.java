@@ -4,6 +4,7 @@
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient.dto.airquality;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.Arrays;
 
@@ -14,10 +15,14 @@ import java.util.Arrays;
  * Created on 9/30/2022
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AirQualitySensorWrapper {
 	private String sensorName;
 	@JsonAlias("sensors")
 	private AirQualitySensorResponse[] airQualitySensorResponses;
+
+	@JsonAlias("Error")
+	private String error;
 
 	/**
 	 * Retrieves {@link #sensorName}
@@ -53,6 +58,24 @@ public class AirQualitySensorWrapper {
 	 */
 	public void setAirQualitySensorResponses(AirQualitySensorResponse[] airQualitySensorResponses) {
 		this.airQualitySensorResponses = airQualitySensorResponses;
+	}
+
+	/**
+	 * Retrieves {@link #error}
+	 *
+	 * @return value of {@link #error}
+	 */
+	public String getError() {
+		return error;
+	}
+
+	/**
+	 * Sets {@link #error} value
+	 *
+	 * @param error new value of {@link #error}
+	 */
+	public void setError(String error) {
+		this.error = error;
 	}
 
 	@Override

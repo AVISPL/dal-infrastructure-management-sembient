@@ -32,7 +32,9 @@ public class SembientAggregatorConstant {
 	public static final String HASH = "#";
 	public static final String OCCUPANCY_LIST = "OccupancyList";
 	public static final String HOUR = "Hour";
-	public static final int DEFAULT_REFRESH_INTERVAL = 10;
+	public static final int DEFAULT_INSTALLATION_LAYOUT_POLLING_CYCLE = 10;
+
+	public static final int DEFAULT_POLLING_CYCLE = 1;
 	public static final String REGION_TAG_NEW_TAG = "RegionTags#NewTag";
 	public static final String REGION_TAG_CREATE = "RegionTags#CreateNewTag";
 	public static final String LABEL_PRESSED_CREATING = "Creating";
@@ -43,7 +45,8 @@ public class SembientAggregatorConstant {
 	public static final String THERMAL = "Thermal";
 	public static final String NO_DATA = "No data";
 	public static final String PROPERTY_MESSAGE = "OccupancyList#Message";
-	public static final String PROPERTY_NUMBER_OF_OCCUPANCE = "OccupancyList#NumberOfOccupance";
+	public static final String PROPERTY_NUMBER_OF_OCCUPANTS = "OccupancyList#NumberOfOccupants";
+	public static final String PROPERTY_UTILIZATION = "OccupancyList#Utilization(%)";
 	public static final String PROPERTY_USAGE_TIME = "OccupancyList#UsageTime";
 	public static final String PROPERTY_HOUR = "OccupancyList#Hour";
 	public static final String PROPERTY_CURRENT_DATE = "OccupancyList#CurrentDate";
@@ -65,20 +68,20 @@ public class SembientAggregatorConstant {
 	public static final String TAG = "Tag";
 	public static final String REGION = "Region";
 	public static final String DEFAULT_WORK_HOUR = "8";
-	public static final String TEMPERATURE_F = "Temperature(F)";
-	public static final String HUMIDITY = "Humidity(%)";
+	public static final String TEMPERATURE_LATEST_F = "TemperatureLatest(F)";
+	public static final String HUMIDITY_LATEST = "HumidityLatest(%)";
 	public static final String RECENT_DATA = "RecentData";
 	public static final String LAST_UPDATE = "LastUpdate";
 	public static final String MESSAGE = "Message";
 	public static final String STATUS_CODE_200 = "200";
-	public static final String CO2_VALUE = "CO2Value(C)";
+	public static final String CO2_VALUE = "CO2(ppm)";
 	public static final String FLOOR_PROPERTY = "Floor%02d";
 	public static final String BUILDING_PROPERTY = "Buildings#Building%02d";
 	public static final String COLON = ":";
-	public static final String TVOCVALUE_MICROGRAM = "TVOCValue(microgram/m3)";
-	public static final String PM_25_VALUE_MICROMET = "PM25Value(micromet)";
+	public static final String TVOCVALUE_MICROGRAM = "TVOC(microgram/m3)";
+	public static final String PM_25_VALUE_MICROMET = "PM2.5(microgram/m3)";
 	public static final long MINUTE_TO_MS = 60000L;
-	public static final String NEXT_REFRESH_INTERVAL = "NextRefreshInterval";
+	public static final String NEXT_INSTALLATION_LAYOUT_POLLING_CYCLE = "NextInstallationLayoutPollingCycle";
 	public static final int MAXIMUM_RETRY = 10;
 	public static final int MAX_NO_THREADS = 8;
 	public static final String STATUS_CODE_401 = "401";
@@ -104,4 +107,19 @@ public class SembientAggregatorConstant {
 	public static final String COMMAND_IAQ_TIMESERIES = "/v3.1/iaq/timeseries/";
 	public static final String COMMAND_THERMAL_TIMESERIES = "/v3.1/thermal/timeseries/";
 	public static final String COMMAND_OCCUPANCY_TIMESERIES = "/v3.1/occupancy/timeseries/";
+	public static final String BUILDING_NAME = "BuildingName";
+	public static final String FLOOR_NAME = "FloorName";
+	public static final String REGIONS = "Regions";
+	public static final String CAPACITY = "Capacity";
+	public static final String REGION_TYPE = "RegionType";
+	public static final String TEMPERATURE_AVG_F = "TemperatureAvg(F)";
+	public static final String TEMPERATURE_MAX_F = "TemperatureMax(F)";
+	public static final String TEMPERATURE_MIN_F = "TemperatureMin(F)";
+	public static final String HUMIDITY_AVG = "HumidityAvg(%)";
+	public static final String HUMIDITY_MAX = "HumidityMax(%)";
+	public static final String HUMIDITY_MIN = "HumidityMin(%)";
+	public static final String FROM_TIME = "FromTime";
+	public static final String TO_TIME = "ToTime";
+	public static final String NEXT_POLLING_CYCLE = "NextPollingCycle";
+	public static final String FLOAT_WITH_TWO_DECIMAL = "%.2f";
 }
