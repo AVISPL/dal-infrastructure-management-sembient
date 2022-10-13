@@ -162,10 +162,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					}
 					devicesExecutionPool.removeIf(Future::isDone);
 				} while (!devicesExecutionPool.isEmpty());
-
-				// We don't want to fetch devices statuses too often, so by default it's currentTime + 30s
-				// otherwise - the variable is reset by the retrieveMultipleStatistics() call, which
-				// launches devices detailed statistics collection
+				// We don't want to fetch devices statuses too often, so by default it's currentTime + pollingCycle
 				if (StringUtils.isNotNullOrEmpty(pollingCycle)) {
 					long interval;
 					try {
@@ -621,7 +618,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					case SembientAggregatorConstant.NEW_TAG:
 						String newTagValue = (String) controllableProperty.getValue();
 						if (StringUtils.isNullOrEmpty(newTagValue) || StringUtils.isNullOrEmpty(newTagValue.trim())) {
-							throw new ResourceNotReachableException("Cannot create new region tag with value is empty or null or only space character.");
+							throw new IllegalArgumentException("Cannot create new region tag with value is empty or null or only space character.");
 						}
 						lastNewTag.put(deviceId, (String) controllableProperty.getValue());
 						statFromCached.put(SembientAggregatorConstant.REGION_TAG_NEW_TAG, (String) controllableProperty.getValue());
@@ -647,7 +644,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					case SembientAggregatorConstant.CREATE_NEW_TAG:
 						String newTag = lastNewTag.get(deviceId);
 						if (StringUtils.isNullOrEmpty(newTag) || StringUtils.isNullOrEmpty(newTag.trim())) {
-							throw new ResourceNotReachableException("NewTag value cannot be empty or or only space characters.");
+							throw new IllegalArgumentException("NewTag value cannot be empty or or only space characters.");
 						}
 						StringBuilder createRequestBuilder = new StringBuilder();
 						createRequestBuilder.append(SembientAggregatorConstant.COMMAND_SPACE_TAGS).append(loginResponse.getCustomerId()).append(SembientAggregatorConstant.SLASH).append(buildingID)
@@ -659,17 +656,17 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						} catch (CommandFailureException e) {
 							logger.error("Fail to create with status code: " + e.getStatusCode() + ", value: " + newTag, e);
 							if (e.getStatusCode() == 429) {
-								throw new ResourceNotReachableException("Too many request, please try to create region tag with value: " + newTag + " later.");
+								throw new IllegalStateException("Too many request, please try to create region tag with value: " + newTag + " later.");
 							} else {
-								throw new ResourceNotReachableException("Fail to create region tag with value: " + newTag);
+								throw new IllegalStateException("Fail to create region tag with value: " + newTag);
 							}
 						} catch (Exception e) {
 							logger.error("Exception occur when creating region tag with value: " + newTag, e);
-							throw new ResourceNotReachableException("Fail to create region tag with value: " + newTag);
+							throw new IllegalStateException("Fail to create region tag with value: " + newTag);
 						}
 						if (createRegionTagWrapperControl != null) {
 							if (!SembientAggregatorConstant.STATUS_CODE_200.equals(createRegionTagWrapperControl.getStatusCode())) {
-								throw new CommandFailureException("Fail to create region with value is: " + controllableProperty.getValue(), createRequestBuilder.toString(), createRegionTagWrapperControl.toString());
+								throw new IllegalStateException("Fail to create region with value is: " + controllableProperty.getValue());
 							}
 							lastNewTag.put(deviceId, SembientAggregatorConstant.EMPTY);
 							// get old tags
@@ -697,13 +694,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							controlFromCached.add(createText(statFromCached, SembientAggregatorConstant.REGION_TAG_NEW_TAG, SembientAggregatorConstant.EMPTY));
 						} else {
 							logger.error("Error while creating region with status code: 429 and value " + newTag);
-							throw new ResourceNotReachableException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
+							throw new IllegalStateException("Too many requests sent to the device, please try to create one more time with value: " + newTag);
 						}
 						break;
 					case SembientAggregatorConstant.DELETE_SELECTED_TAG:
 						String valueToBeDelete = aggregatedDeviceTagMap.get(deviceId);
 						if (StringUtils.isNullOrEmpty(valueToBeDelete)) {
-							throw new ResourceNotReachableException("Tag dropdowns value cannot be empty.");
+							throw new IllegalArgumentException("Tag dropdowns value cannot be empty.");
 						}
 						String deleteRequest =
 								SembientAggregatorConstant.COMMAND_SPACE_TAGS + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
@@ -734,13 +731,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						} catch (CommandFailureException e) {
 							logger.error("Fail to delete with status code: " + e.getStatusCode() + ", value: " + valueToBeDelete, e);
 							if (e.getStatusCode() == 429) {
-								throw new ResourceNotReachableException("Too many request, please try to delete with value: " + valueToBeDelete + " later.");
+								throw new IllegalStateException("Too many request, please try to delete with value: " + valueToBeDelete + " later.");
 							} else {
-								throw new ResourceNotReachableException("Fail to delete region tag with value: " + valueToBeDelete);
+								throw new IllegalStateException("Fail to delete region tag with value: " + valueToBeDelete);
 							}
 						} catch (Exception e) {
 							logger.error("Exception occur when deleting region tag with value: " + valueToBeDelete, e);
-							throw new ResourceNotReachableException("Fail to delete region tag with value: " + valueToBeDelete);
+							throw new IllegalStateException("Fail to delete region tag with value: " + valueToBeDelete);
 						}
 						break;
 					default:
@@ -1229,7 +1226,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				if (aggregatedDevices.get(deviceID) != null && !aggregatedDevices.get(deviceID).getProperties().isEmpty()) {
 					properties = aggregatedDevices.get(deviceID).getProperties();
 				} else {
-					properties.put(SembientAggregatorConstant.REGIONS, sensorResponse.getRegionName());
+					if (!SembientAggregatorConstant.EMPTY.equals(sensorResponse.getRegionName())) {
+						properties.put(SembientAggregatorConstant.REGIONS, sensorResponse.getRegionName());
+					}
 					properties.put(SembientAggregatorConstant.BUILDING_NAME, buildingName);
 					properties.put(SembientAggregatorConstant.FLOOR_NAME, floorName);
 				}
@@ -1293,7 +1292,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	}
 
 	/**
-	 * Populate region details information
+	 * Populate device details information
 	 *
 	 * @param aggregatedDevice Aggregated device that get from {@link SembientAggregatorCommunicator#fetchDevicesList}
 	 */
@@ -1389,7 +1388,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
 	private void populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) throws Exception {
-		// TODO
 		AirQualityWrapper airQualityWrapper = doGetWithRetry(
 				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 						+ SembientAggregatorConstant.SLASH + currentDate, AirQualityWrapper.class);
@@ -1464,7 +1462,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				long hourInMs = 3600 * 1000;
 				boolean isRecentData = (dif) < hourInMs;
 				properties.put(recentDataProperty, String.valueOf(isRecentData));
-				// now we format the res by using SimpleDateFormat
 				properties.put(toTimeProperty, obj.format(toTimeDate));
 				properties.put(fromTimeProperty, obj.format(fromTimeDate));
 			}
@@ -1713,7 +1710,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
 	 *
 	 * @param url to retrieve data from
-	 * @return JsonNode response body
+	 * @return An instance of a input class
 	 * @throws Exception if a communication error occurs
 	 */
 	private <T> T doGetWithRetry(String url, Class<T> clazz) throws Exception {
@@ -1739,7 +1736,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(200);
+			TimeUnit.MILLISECONDS.sleep(500);
 		}
 
 		if (retryAttempts == SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
