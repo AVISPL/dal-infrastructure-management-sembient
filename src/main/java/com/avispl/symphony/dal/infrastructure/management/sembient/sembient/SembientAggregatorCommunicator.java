@@ -1226,9 +1226,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				sensorDevice.setDeviceOnline(true);
 				sensorDevice.setDeviceName(sensorName);
 				Map<String, String> properties = new HashMap<>();
-				properties.put(SembientAggregatorConstant.REGIONS, sensorResponse.getRegionName());
-				properties.put(SembientAggregatorConstant.BUILDING_NAME, buildingName);
-				properties.put(SembientAggregatorConstant.FLOOR_NAME, floorName);
+				if (aggregatedDevices.get(deviceID) != null && !aggregatedDevices.get(deviceID).getProperties().isEmpty()) {
+					properties = aggregatedDevices.get(deviceID).getProperties();
+				} else {
+					properties.put(SembientAggregatorConstant.REGIONS, sensorResponse.getRegionName());
+					properties.put(SembientAggregatorConstant.BUILDING_NAME, buildingName);
+					properties.put(SembientAggregatorConstant.FLOOR_NAME, floorName);
+				}
 				sensorDevice.setProperties(properties);
 				aggregatedDevices.put(deviceID, sensorDevice);
 			}
