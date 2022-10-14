@@ -1677,6 +1677,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			if (occupancyData.length == 0) {
 				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
+				return;
 			}
 			// Set to 8 by default if user haven't changed the hour value.
 			String hourValue = SembientAggregatorConstant.DEFAULT_WORK_HOUR;
