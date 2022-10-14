@@ -167,7 +167,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					long interval;
 					try {
 						int pollingInInt = Integer.parseInt(pollingCycle);
-						if (pollingInInt < SembientAggregatorConstant.DEFAULT_POLLING_CYCLE) {
+						if (pollingInInt < 1) {
 							pollingInInt = SembientAggregatorConstant.DEFAULT_POLLING_CYCLE ;
 						}
 						interval = pollingInInt * SembientAggregatorConstant.MINUTE_TO_MS;
@@ -996,7 +996,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			long interval;
 			try {
 				int pollingInInt = Integer.parseInt(installationLayoutPollingCycle);
-				if (pollingInInt < SembientAggregatorConstant.DEFAULT_INSTALLATION_LAYOUT_POLLING_CYCLE) {
+				if (pollingInInt < 1) {
 					pollingInInt = SembientAggregatorConstant.DEFAULT_INSTALLATION_LAYOUT_POLLING_CYCLE;
 				}
 				interval = pollingInInt * SembientAggregatorConstant.MINUTE_TO_MS;
