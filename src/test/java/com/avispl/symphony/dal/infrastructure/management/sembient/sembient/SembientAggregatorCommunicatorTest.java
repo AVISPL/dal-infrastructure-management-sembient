@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
-import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 
 @Tag("RealDevice")
 class SembientAggregatorCommunicatorTest {
@@ -84,11 +83,18 @@ class SembientAggregatorCommunicatorTest {
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
 		String key = "Thermal#";
-		Assert.assertNotNull( properties);
-		Assert.assertNotNull( properties.get(key + "Temperature(F)"));
-		Assert.assertNotNull( properties.get(key + "FromTime"));
-		Assert.assertNotNull( properties.get(key + "ToTime"));
-		Assert.assertNotNull( properties.get(key + "RecentData"));
+		Assert.assertNotNull(properties);
+		Assert.assertNotNull(properties.get(key + "TemperatureLatest(F)"));
+		Assert.assertNotNull(properties.get(key + "TemperatureMax(F)"));
+		Assert.assertNotNull(properties.get(key + "TemperatureMin(F)"));
+		Assert.assertNotNull(properties.get(key + "TemperatureAvg(F)"));
+		Assert.assertNotNull(properties.get(key + "HumidityLatest(%)"));
+		Assert.assertNotNull(properties.get(key + "HumidityMax(%)"));
+		Assert.assertNotNull(properties.get(key + "HumidityMin(%)"));
+		Assert.assertNotNull(properties.get(key + "HumidityAvg(%)"));
+		Assert.assertNotNull(properties.get(key + "FromTime"));
+		Assert.assertNotNull(properties.get(key + "ToTime"));
+		Assert.assertNotNull(properties.get(key + "RecentData"));
 	}
 
 	/**
@@ -105,7 +111,8 @@ class SembientAggregatorCommunicatorTest {
 		Map<String, String> properties = devices.get(0).getProperties();
 		String key = "AirQuality#";
 		Assert.assertNotNull(properties.get(key + "CO2(ppm)"));
-		Assert.assertNotNull(properties.get(key + "PM25Value(microgram/m3)"));
+		Assert.assertNotNull(properties.get(key + "PM2.5(microgram/m3)"));
+		Assert.assertNotNull(properties.get(key + "TVOC(microgram/m3)"));
 		Assert.assertNotNull(properties.get(key + "FromTime"));
 		Assert.assertNotNull(properties.get(key + "ToTime"));
 		Assert.assertNotNull(properties.get(key + "RecentData"));
@@ -124,7 +131,7 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("No data", properties.get("Sensor3005-AirQuality#Message"));
+		Assert.assertEquals("No data", properties.get("AirQuality#Message"));
 	}
 
 	/**
@@ -140,7 +147,7 @@ class SembientAggregatorCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
-		Assert.assertEquals("No data", properties.get("Sensor3005-Thermal#Message"));
+		Assert.assertEquals("No data", properties.get("Thermal#Message"));
 	}
 
 	/**
@@ -154,7 +161,13 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(4).getProperties();
+		int index = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			if (devices.get(i).getDeviceId().equals("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2")) {
+				index = i;
+			}
+		}
+		Map<String, String> properties = devices.get(index).getProperties();
 		Assert.assertNotNull(properties.get("OccupancyList#CurrentDate"));
 		Assert.assertEquals("8", properties.get("OccupancyList#Hour"));
 		Assert.assertNotNull(properties.get("OccupancyList#NumberOfOccupants"));
@@ -172,7 +185,13 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(4).getProperties();
+		int index = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			if (devices.get(i).getDeviceId().equals("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2")) {
+				index = i;
+			}
+		}
+		Map<String, String> properties = devices.get(index).getProperties();
 		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
 		controllableProperty.setProperty("RegionTags#NewTag");
@@ -180,10 +199,9 @@ class SembientAggregatorCommunicatorTest {
 		controllableProperty.setDeviceId("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
 		communicator.getMultipleStatistics();
-		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
-		properties = devices.get(4).getProperties();
-		Assert.assertEquals("res3", properties.get("RegionTags#NewTag"));
+		properties = devices.get(index).getProperties();
+		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 	}
 
 	/**
@@ -197,7 +215,13 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(4).getProperties();
+		int index = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			if (devices.get(i).getDeviceId().equals("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2")) {
+				index = i;
+			}
+		}
+		Map<String, String> properties = devices.get(index).getProperties();
 		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
 		controllableProperty.setProperty("RegionTags#NewTag");
@@ -205,10 +229,8 @@ class SembientAggregatorCommunicatorTest {
 		controllableProperty.setDeviceId("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2");
 		communicator.controlProperty(controllableProperty);
 		communicator.getMultipleStatistics();
-		communicator.retrieveMultipleStatistics();
-		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
-		properties = devices.get(4).getProperties();
+		properties = devices.get(index).getProperties();
 		Assert.assertEquals("res3", properties.get("RegionTags#NewTag"));
 		controllableProperty.setProperty("RegionTags#CreateNewTag");
 		controllableProperty.setValue("1");
@@ -230,7 +252,13 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(4).getProperties();
+		int index = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			if (devices.get(i).getDeviceId().equals("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2")) {
+				index = i;
+			}
+		}
+		Map<String, String> properties = devices.get(index).getProperties();
 		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
 		controllableProperty.setProperty("RegionTags#DeleteSelectedTag");
@@ -241,7 +269,7 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
-		properties = devices.get(4).getProperties();
+		properties = devices.get(index).getProperties();
 		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		Assert.assertEquals(null, properties.get("RegionTags#Tag"));
 	}
@@ -258,7 +286,13 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(4).getProperties();
+		int index = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			if (devices.get(i).getDeviceId().equals("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2")) {
+				index = i;
+			}
+		}
+		Map<String, String> properties = devices.get(index).getProperties();
 		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		ControllableProperty controllableProperty = new ControllableProperty();
 		controllableProperty.setProperty("RegionTags#Tag");
@@ -267,7 +301,7 @@ class SembientAggregatorCommunicatorTest {
 		communicator.controlProperty(controllableProperty);
 		communicator.getMultipleStatistics();
 		devices = communicator.retrieveMultipleStatistics();
-		properties = devices.get(4).getProperties();
+		properties = devices.get(index).getProperties();
 		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
 		Assert.assertEquals("res2", properties.get("RegionTags#Tag"));
 	}
@@ -284,7 +318,13 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Map<String, String> properties = devices.get(4).getProperties();
+		int index = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			if (devices.get(i).getDeviceId().equals("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2")) {
+				index = i;
+			}
+		}
+		Map<String, String> properties = devices.get(index).getProperties();
 		Assert.assertNotNull(properties.get("OccupancyList#CurrentDate"));
 		Assert.assertEquals("8", properties.get("OccupancyList#Hour"));
 		Assert.assertNotNull(properties.get("OccupancyList#NumberOfOccupants"));
@@ -298,11 +338,11 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		devices = communicator.retrieveMultipleStatistics();
-		properties = devices.get(4).getProperties();
-		Assert.assertNotNull( properties.get("OccupancyList#CurrentDate"));
+		properties = devices.get(index).getProperties();
+		Assert.assertNotNull(properties.get("OccupancyList#CurrentDate"));
 		Assert.assertEquals("10", properties.get("OccupancyList#Hour"));
 		Assert.assertNotNull(properties.get("OccupancyList#NumberOfOccupants"));
-		Assert.assertNotNull( properties.get("OccupancyList#UsageTime"));
+		Assert.assertNotNull(properties.get("OccupancyList#UsageTime"));
 	}
 
 	/**
@@ -357,7 +397,7 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
-		Assert.assertEquals(2, devices.size());
+		Assert.assertEquals(7, devices.size());
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
 		Assert.assertEquals("TEST", stats.get("BuildingTest#BuildingId"));
@@ -419,7 +459,8 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testRegionFilterByType() throws Exception {
-		communicator.setDeviceTypeFilter("Workstations");
+		communicator.setDeviceTypeFilter("Region");
+		communicator.setRegionTypeFilter("Workstations");
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
@@ -512,7 +553,8 @@ class SembientAggregatorCommunicatorTest {
 	@Test
 	void testFloorFilterAndRegionFilter() throws Exception {
 		communicator.setFloorFilter("1st floor");
-		communicator.setDeviceTypeFilter("Workstations");
+		communicator.setDeviceTypeFilter("Region");
+		communicator.setRegionTypeFilter("Workstations");
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
@@ -557,13 +599,9 @@ class SembientAggregatorCommunicatorTest {
 	 */
 	@Test
 	void testPollingInterval() throws Exception {
-		communicator.setInstallationLayoutPollingCycle("");
-		communicator.getMultipleStatistics();
-		communicator.retrieveMultipleStatistics();
-		Thread.sleep(30000);
+		communicator.setInstallationLayoutPollingCycle("10");
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
-		communicator.retrieveMultipleStatistics();
-		Assert.assertNotNull(extendedStatistics.getStatistics().get("NextRefreshInterval"));
+		Assert.assertNotNull(extendedStatistics.getStatistics().get("NextInstallationLayoutPollingCycle"));
 	}
 
 	// Negative cases
@@ -584,7 +622,7 @@ class SembientAggregatorCommunicatorTest {
 		controllableProperty.setValue("");
 		controllableProperty.setDeviceId("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2");
 
-		Exception exception = Assert.assertThrows(ResourceNotReachableException.class, () -> {
+		Exception exception = Assert.assertThrows(IllegalArgumentException.class, () -> {
 			communicator.controlProperty(controllableProperty);
 		});
 
@@ -605,71 +643,12 @@ class SembientAggregatorCommunicatorTest {
 		communicator.setLogin("not-exist-account");
 		communicator.init();
 		Exception exception = Assert.assertThrows(FailedLoginException.class, () -> {
-			communicator.getMultipleStatistics();;
+			communicator.getMultipleStatistics();
+			;
 		});
 		String expectedMessage = "Fail to login with username: not-exist-account, password: useforTMA";
 		String actualMessage = exception.getMessage();
 
 		Assert.assertTrue(actualMessage.contains(expectedMessage));
 	}
-
-//	@Test()
-//	void test11() throws Exception {
-//		communicator.getMultipleStatistics();
-//		int[] a = communicator.test("2022-09-19");
-//		int[] b = communicator.test("2022-09-20");
-//		int[] c = communicator.test("2022-09-21");
-//		int[] d = communicator.test("2022-09-22");
-//		int[] e = communicator.test("2022-09-23");
-//		int[] f = communicator.test("2022-09-24");
-//		int[] g = communicator.test("2022-09-25");
-////		int[] b = communicator.test("2022-10-04");
-////		communicator.test("2022-10-05");
-////		int[] c = communicator.test("2022-10-06");
-////		int[] d = communicator.test("2022-10-07");
-////		int[] e = communicator.test("2022-10-08");
-////		int[] f = communicator.test("2022-10-09");
-//		int suma = 0;
-//		int sumb =0;
-//		int sumc =0;
-//		int sum =0;
-//		for (int i = 0; i < 3; i++) {
-//			if (i ==0 ){
-//				suma += a[i];
-//				suma += b[i];
-//				suma += c[i];
-//				suma += d[i];
-//				suma += e[i];
-//				suma += f[i];
-//				suma += g[i];
-//				sum+=suma;
-//			}
-//			if (i == 1) {
-//				sumb += a[i];
-//				sumb += b[i];
-//				sumb += c[i];
-//				sumb += d[i];
-//				sumb += e[i];
-//				sumb += f[i];
-//				sumb += g[i];
-//				sum+=sumb;
-//			}
-//
-//			if (i == 2) {
-//				sumc += a[i];
-//				sumc += b[i];
-//				sumc += c[i];
-//				sumc += d[i];
-//				sumc += e[i];
-//				sumc += f[i];
-//				sumc += g[i];
-//				sum+=sumc;
-//			}
-//
-//		}
-//		System.out.println(sum);
-//		System.out.println(suma);
-//		System.out.println(sumb);
-//		System.out.println(sumc);
-//	}
 }

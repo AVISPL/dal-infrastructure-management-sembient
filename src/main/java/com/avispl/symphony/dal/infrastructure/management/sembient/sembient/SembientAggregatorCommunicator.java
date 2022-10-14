@@ -823,7 +823,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						int i = 0;
 						for (String filter : floorFilters) {
 							for (String floorName : floorNames) {
-								if (filter.equals(floorName)) {
+								if (filter.trim().equals(floorName)) {
 									i++;
 									String floorIndex = String.format(SembientAggregatorConstant.HASH + SembientAggregatorConstant.FLOOR_PROPERTY, i);
 									newStatistics.put(SembientAggregatorConstant.BUILDING + buildingResponse.getBuildingName() + floorIndex, floorName);
@@ -1070,7 +1070,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
 							String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
 							for (String type : listTypeToBeFilter) {
-								retrieveDevices(buildingID, buildingName, floor, type);
+								retrieveDevices(buildingID, buildingName, floor, type.trim());
 							}
 						} else {
 							retrieveDevices(buildingID, buildingName, floor, null);
@@ -1084,7 +1084,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
 					String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
 					for (String type : listTypeToBeFilter) {
-						retrieveDevices(buildingID, buildingName, floorName, type);
+						retrieveDevices(buildingID, buildingName, floorName, type.trim());
 					}
 				} else {
 					retrieveDevices(buildingID, buildingName, floorName, null);
@@ -1109,7 +1109,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (StringUtils.isNotNullOrEmpty(regionTypeFilter)) {
 				String[] listTypeToBeFilter = regionTypeFilter.split(SembientAggregatorConstant.COMMA);
 				for (String regionType : listTypeToBeFilter) {
-					retrieveRegions(buildingID, buildingName, floorName, regionType);
+					retrieveRegions(buildingID, buildingName, floorName, regionType.trim());
 				}
 			} else {
 				retrieveRegions(buildingID, buildingName, floorName, null);
@@ -1123,7 +1123,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				if (StringUtils.isNotNullOrEmpty(regionTypeFilter)) {
 					String[] listTypeToBeFilter = regionTypeFilter.split(SembientAggregatorConstant.COMMA);
 					for (String regionType : listTypeToBeFilter) {
-						retrieveRegions(buildingID, buildingName, floorName, regionType);
+						retrieveRegions(buildingID, buildingName, floorName, regionType.trim());
 					}
 				} else {
 					retrieveRegions(buildingID, buildingName, floorName, null);
@@ -1465,6 +1465,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				properties.put(toTimeProperty, obj.format(toTimeDate));
 				properties.put(fromTimeProperty, obj.format(fromTimeDate));
 			}
+		} else {
+			if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+					+ SembientAggregatorConstant.CO2_VALUE)) {
+				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+			}
 		}
 	}
 
@@ -1589,6 +1594,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				properties.put(sensorToTimeProperty, obj.format(toTimeDate));
 				properties.put(sensorFromTimeProperty, obj.format(fromTimeDate));
 			}
+		} else {
+			if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
+				populateNoData(properties, SembientAggregatorConstant.THERMAL);
+			}
 		}
 	}
 
@@ -1701,6 +1710,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			values.add(SembientAggregatorConstant.WORK_HOUR_17);
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_HOUR, values, hourValue));
 			properties.put(SembientAggregatorConstant.PROPERTY_CURRENT_DATE, dateToBeDisplayed);
+		} else {
+			if (!properties.containsKey(SembientAggregatorConstant.PROPERTY_HOUR)) {
+				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
+			}
 		}
 	}
 
