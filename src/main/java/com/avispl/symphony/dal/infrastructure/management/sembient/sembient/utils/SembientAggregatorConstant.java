@@ -46,8 +46,9 @@ public class SembientAggregatorConstant {
 	public static final String NO_DATA = "No data";
 	public static final String PROPERTY_MESSAGE = "OccupancyList#Message";
 	public static final String PROPERTY_NUMBER_OF_OCCUPANTS = "OccupancyList#NumberOfOccupants";
-	public static final String PROPERTY_UTILIZATION = "OccupancyList#Utilization(%)";
-	public static final String PROPERTY_USAGE_TIME = "OccupancyList#UsageTime";
+	public static final String PROPERTY_OCCUPANCY = "OccupancyList#Occupancy(%)";
+	public static final String PROPERTY_USAGE_TIME_IN_MINUTE = "OccupancyList#UsageTime(minute)";
+	public static final String PROPERTY_USAGE_TIME_IN_PERCENT = "OccupancyList#UsageTime(%)";
 	public static final String PROPERTY_HOUR = "OccupancyList#Hour";
 	public static final String PROPERTY_CURRENT_DATE = "OccupancyList#CurrentDate";
 	public static final String EMPTY = "";
@@ -74,12 +75,12 @@ public class SembientAggregatorConstant {
 	public static final String LAST_UPDATE = "LastUpdate";
 	public static final String MESSAGE = "Message";
 	public static final String STATUS_CODE_200 = "200";
-	public static final String CO2_VALUE = "CO2(ppm)";
+	public static final String CO2_VALUE_LATEST = "CO2Latest(ppm)";
 	public static final String FLOOR_PROPERTY = "Floor%02d";
 	public static final String BUILDING_PROPERTY = "Buildings#Building%02d";
 	public static final String COLON = ":";
-	public static final String TVOCVALUE_MICROGRAM = "TVOC(microgram/m3)";
-	public static final String PM_25_VALUE_MICROMET = "PM2.5(microgram/m3)";
+	public static final String TVOC_VALUE_LATEST_MICROGRAM = "TVOCLatest(microgram/m3)";
+	public static final String PM_25_VALUE_LATEST_MICROMET = "PM2.5Latest(microgram/m3)";
 	public static final long MINUTE_TO_MS = 60000L;
 	public static final String NEXT_INSTALLATION_LAYOUT_POLLING_CYCLE = "NextInstallationLayoutPollingCycle";
 	public static final int MAXIMUM_RETRY = 10;

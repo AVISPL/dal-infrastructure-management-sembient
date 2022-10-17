@@ -168,7 +168,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					try {
 						int pollingInInt = Integer.parseInt(pollingCycle);
 						if (pollingInInt < 1) {
-							pollingInInt = SembientAggregatorConstant.DEFAULT_POLLING_CYCLE ;
+							pollingInInt = SembientAggregatorConstant.DEFAULT_POLLING_CYCLE;
 						}
 						interval = pollingInInt * SembientAggregatorConstant.MINUTE_TO_MS;
 					} catch (Exception e) {
@@ -600,9 +600,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						if (rawCapacity != null) {
 							int capacity = Integer.parseInt(rawCapacity);
 							float utilization = Integer.parseInt(data.getOccupancy()) / (float) capacity;
-							statFromCached.put(SembientAggregatorConstant.PROPERTY_UTILIZATION, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, utilization * 100));
+							statFromCached.put(SembientAggregatorConstant.PROPERTY_OCCUPANCY, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, utilization * 100));
 						}
-						statFromCached.put(SembientAggregatorConstant.PROPERTY_USAGE_TIME, data.getUsageTime());
+						statFromCached.put(SembientAggregatorConstant.PROPERTY_USAGE_TIME_IN_MINUTE, data.getUsageTime());
+						float usageTimeInPercentage = Integer.parseInt(data.getUsageTime()) / (float) 60;
+						statFromCached.put(SembientAggregatorConstant.PROPERTY_USAGE_TIME_IN_PERCENT, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, usageTimeInPercentage * 100));
 						break;
 					}
 				}
@@ -617,15 +619,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				switch (propertyName) {
 					case SembientAggregatorConstant.NEW_TAG:
 						String newTagValue = (String) controllableProperty.getValue();
-						if (StringUtils.isNullOrEmpty(newTagValue) || StringUtils.isNullOrEmpty(newTagValue.trim())) {
-							throw new IllegalArgumentException("Cannot create new region tag with value is empty or null or only space character.");
-						}
-						lastNewTag.put(deviceId, (String) controllableProperty.getValue());
-						statFromCached.put(SembientAggregatorConstant.REGION_TAG_NEW_TAG, (String) controllableProperty.getValue());
+						lastNewTag.put(deviceId, newTagValue);
+						statFromCached.put(SembientAggregatorConstant.REGION_TAG_NEW_TAG, newTagValue);
 						for (AdvancedControllableProperty control : controlFromCached) {
 							if (control.getName().equals(controllableProperty.getProperty())) {
 								control.setTimestamp(new Date());
-								control.setValue(controllableProperty.getValue());
+								control.setValue(newTagValue);
 								break;
 							}
 						}
@@ -644,7 +643,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					case SembientAggregatorConstant.CREATE_NEW_TAG:
 						String newTag = lastNewTag.get(deviceId);
 						if (StringUtils.isNullOrEmpty(newTag) || StringUtils.isNullOrEmpty(newTag.trim())) {
-							throw new IllegalArgumentException("NewTag value cannot be empty or or only space characters.");
+							throw new IllegalArgumentException("Cannot create new region tag with NewTag's value is empty or null or only space characters.");
 						}
 						StringBuilder createRequestBuilder = new StringBuilder();
 						createRequestBuilder.append(SembientAggregatorConstant.COMMAND_SPACE_TAGS).append(loginResponse.getCustomerId()).append(SembientAggregatorConstant.SLASH).append(buildingID)
@@ -854,23 +853,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics() throws Exception {
-		reentrantLock.lock();
-		try {
-			sembientLogin();
-			if (executorService == null) {
-				// Due to the bug that after changing properties on fly - the adapter is destroyed but adapter is not initialized properly,
-				// so executor service is not running. We need to make sure executorService exists
-				executorService = Executors.newFixedThreadPool(SembientAggregatorConstant.MAX_NO_THREADS);
-				executorService.submit(deviceDataLoader = new SembientDeviceDataLoader());
-			}
-
-			long currentTimestamp = System.currentTimeMillis();
-			updateValidRetrieveStatisticsTimestamp();
-			aggregatedDevices.values().forEach(aggregatedDevice -> aggregatedDevice.setTimestamp(currentTimestamp));
-			return new ArrayList<>(aggregatedDevices.values());
-		} finally {
-			reentrantLock.unlock();
-		}
+		updateValidRetrieveStatisticsTimestamp();
+		return aggregatedDevices.values().stream().collect(Collectors.toList());
 	}
 
 	/**
@@ -1066,7 +1050,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			for (String floor : listFloorToBeFilter) {
 				for (String floorName : floorNames) {
 					if (floor.trim().equals(floorName)) {
-						// Filter by region type TODO: 10/10 bỏ cái này
+						// Filter by region type
 						if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
 							String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
 							for (String type : listTypeToBeFilter) {
@@ -1419,13 +1403,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			// Remove previous properties
 			// CO2
 			String co2Property = SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-					+ SembientAggregatorConstant.CO2_VALUE;
+					+ SembientAggregatorConstant.CO2_VALUE_LATEST;
 			// TVOC
 			String tvocProperty = SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-					+ SembientAggregatorConstant.TVOCVALUE_MICROGRAM;
+					+ SembientAggregatorConstant.TVOC_VALUE_LATEST_MICROGRAM;
 			// PM25
 			String pm25Property = SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-					+ SembientAggregatorConstant.PM_25_VALUE_MICROMET;
+					+ SembientAggregatorConstant.PM_25_VALUE_LATEST_MICROMET;
 			//
 			String fromTimeProperty = SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
 					+ SembientAggregatorConstant.FROM_TIME;
@@ -1467,7 +1451,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 		} else {
 			if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
-					+ SembientAggregatorConstant.CO2_VALUE)) {
+					+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 			}
 		}
@@ -1665,8 +1649,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			properties.remove(SembientAggregatorConstant.PROPERTY_CURRENT_DATE);
 			properties.remove(SembientAggregatorConstant.PROPERTY_MESSAGE);
 			properties.remove(SembientAggregatorConstant.PROPERTY_NUMBER_OF_OCCUPANTS);
-			properties.remove(SembientAggregatorConstant.PROPERTY_UTILIZATION);
-			properties.remove(SembientAggregatorConstant.PROPERTY_USAGE_TIME);
+			properties.remove(SembientAggregatorConstant.PROPERTY_OCCUPANCY);
+			properties.remove(SembientAggregatorConstant.PROPERTY_USAGE_TIME_IN_MINUTE);
+			properties.remove(SembientAggregatorConstant.PROPERTY_USAGE_TIME_IN_PERCENT);
 			controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_HOUR));
 			OccupancyData[] occupancyData = new OccupancyData[0];
 			for (OccupancyRegionResponse res : occupancyRegionResponses) {
@@ -1692,9 +1677,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					if (rawCapacity != null) {
 						int capacity = Integer.parseInt(properties.get(SembientAggregatorConstant.CAPACITY));
 						float utilization = Integer.parseInt(data.getOccupancy()) / (float) capacity;
-						properties.put(SembientAggregatorConstant.PROPERTY_UTILIZATION, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, utilization * 100));
+						properties.put(SembientAggregatorConstant.PROPERTY_OCCUPANCY, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, utilization * 100));
 					}
-					properties.put(SembientAggregatorConstant.PROPERTY_USAGE_TIME, data.getUsageTime());
+					properties.put(SembientAggregatorConstant.PROPERTY_USAGE_TIME_IN_MINUTE, data.getUsageTime());
+					float usageTimeInPercentage = Integer.parseInt(data.getUsageTime()) / (float) 60;
+					properties.put(SembientAggregatorConstant.PROPERTY_USAGE_TIME_IN_PERCENT, String.format(SembientAggregatorConstant.FLOAT_WITH_TWO_DECIMAL, usageTimeInPercentage * 100));
 					break;
 				}
 			}
@@ -1725,9 +1712,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 *
 	 * @param url to retrieve data from
 	 * @return An instance of a input class
-	 * @throws Exception if a communication error occurs
 	 */
-	private <T> T doGetWithRetry(String url, Class<T> clazz) throws Exception {
+	private <T> T doGetWithRetry(String url, Class<T> clazz) {
 		int retryAttempts = 0;
 		Exception lastError = null;
 
@@ -1750,7 +1736,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				break;
 			}
-			TimeUnit.MILLISECONDS.sleep(500);
+			try {
+				TimeUnit.MILLISECONDS.sleep(500);
+			} catch (InterruptedException exception) {
+				//
+			}
 		}
 
 		if (retryAttempts == SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {

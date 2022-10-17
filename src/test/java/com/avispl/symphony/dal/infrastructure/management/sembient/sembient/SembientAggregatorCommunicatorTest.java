@@ -110,9 +110,9 @@ class SembientAggregatorCommunicatorTest {
 		List<AggregatedDevice> devices = communicator.retrieveMultipleStatistics();
 		Map<String, String> properties = devices.get(0).getProperties();
 		String key = "AirQuality#";
-		Assert.assertNotNull(properties.get(key + "CO2(ppm)"));
-		Assert.assertNotNull(properties.get(key + "PM2.5(microgram/m3)"));
-		Assert.assertNotNull(properties.get(key + "TVOC(microgram/m3)"));
+		Assert.assertNotNull(properties.get(key + "CO2Latest(ppm)"));
+		Assert.assertNotNull(properties.get(key + "PM2.5Latest(microgram/m3)"));
+		Assert.assertNotNull(properties.get(key + "TVOCLatest(microgram/m3)"));
 		Assert.assertNotNull(properties.get(key + "FromTime"));
 		Assert.assertNotNull(properties.get(key + "ToTime"));
 		Assert.assertNotNull(properties.get(key + "RecentData"));
@@ -171,7 +171,7 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertNotNull(properties.get("OccupancyList#CurrentDate"));
 		Assert.assertEquals("8", properties.get("OccupancyList#Hour"));
 		Assert.assertNotNull(properties.get("OccupancyList#NumberOfOccupants"));
-		Assert.assertNotNull(properties.get("OccupancyList#UsageTime"));
+		Assert.assertNotNull(properties.get("OccupancyList#UsageTime(minute)"));
 	}
 
 	/**
@@ -328,7 +328,7 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertNotNull(properties.get("OccupancyList#CurrentDate"));
 		Assert.assertEquals("8", properties.get("OccupancyList#Hour"));
 		Assert.assertNotNull(properties.get("OccupancyList#NumberOfOccupants"));
-		Assert.assertNotNull(properties.get("OccupancyList#UsageTime"));
+		Assert.assertNotNull(properties.get("OccupancyList#UsageTime(minute)"));
 		ControllableProperty controllableProperty = new ControllableProperty();
 		controllableProperty.setProperty("OccupancyList#Hour");
 		controllableProperty.setValue("10");
@@ -342,7 +342,7 @@ class SembientAggregatorCommunicatorTest {
 		Assert.assertNotNull(properties.get("OccupancyList#CurrentDate"));
 		Assert.assertEquals("10", properties.get("OccupancyList#Hour"));
 		Assert.assertNotNull(properties.get("OccupancyList#NumberOfOccupants"));
-		Assert.assertNotNull(properties.get("OccupancyList#UsageTime"));
+		Assert.assertNotNull(properties.get("OccupancyList#UsageTime(minute)"));
 	}
 
 	/**
