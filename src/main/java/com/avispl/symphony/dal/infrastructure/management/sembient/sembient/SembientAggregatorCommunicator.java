@@ -1392,6 +1392,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 						return;
 					}
+				} else {
+					if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
+							+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
+						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+					}
 				}
 			}
 			Map<String, AirQualityData[]> sensorAndIAQMap = new HashMap<>();
@@ -1493,6 +1498,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					if (thermalSensorResponse.length == 0) {
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
 						return;
+					}
+				} else {
+					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
+						populateNoData(properties, SembientAggregatorConstant.THERMAL);
 					}
 				}
 			}
