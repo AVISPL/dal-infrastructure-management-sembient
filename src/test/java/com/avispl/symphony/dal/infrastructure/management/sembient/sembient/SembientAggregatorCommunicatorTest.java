@@ -201,7 +201,7 @@ class SembientAggregatorCommunicatorTest {
 		communicator.getMultipleStatistics();
 		devices = communicator.retrieveMultipleStatistics();
 		properties = devices.get(index).getProperties();
-		Assert.assertEquals("", properties.get("RegionTags#NewTag"));
+		Assert.assertEquals("res3", properties.get("RegionTags#NewTag"));
 	}
 
 	/**
@@ -618,15 +618,15 @@ class SembientAggregatorCommunicatorTest {
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		ControllableProperty controllableProperty = new ControllableProperty();
-		controllableProperty.setProperty("RegionTags#NewTag");
-		controllableProperty.setValue("");
+		controllableProperty.setProperty("RegionTags#CreateNewTag");
+		controllableProperty.setValue(1);
 		controllableProperty.setDeviceId("Region-SANDBOX-KRFOBAZP-TEST-1st floor-Region_2");
 
 		Exception exception = Assert.assertThrows(IllegalArgumentException.class, () -> {
 			communicator.controlProperty(controllableProperty);
 		});
 
-		String expectedMessage = "Cannot create new region tag with value is empty or null";
+		String expectedMessage = "Cannot create new region tag with NewTag's value is empty or null or only space characters.";
 		String actualMessage = exception.getMessage();
 
 		Assert.assertTrue(actualMessage.contains(expectedMessage));
@@ -646,7 +646,7 @@ class SembientAggregatorCommunicatorTest {
 			communicator.getMultipleStatistics();
 			;
 		});
-		String expectedMessage = "Fail to login with username: not-exist-account, password: useforTMA";
+		String expectedMessage = "Failed to login with username: not-exist-account, password: useforTMA";
 		String actualMessage = exception.getMessage();
 
 		Assert.assertTrue(actualMessage.contains(expectedMessage));

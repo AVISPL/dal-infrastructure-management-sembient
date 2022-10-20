@@ -11,7 +11,18 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,7 +36,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.util.CollectionUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.control.Controller;
@@ -36,7 +46,6 @@ import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
 import com.avispl.symphony.api.dal.error.CommandFailureException;
-import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.api.dal.monitor.aggregator.Aggregator;
 import com.avispl.symphony.dal.communicator.RestCommunicator;
@@ -570,7 +579,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void controlProperty(ControllableProperty controllableProperty) throws Exception {
+	public void controlProperty(ControllableProperty controllableProperty) {
 		reentrantLock.lock();
 		try {
 			String deviceId = controllableProperty.getDeviceId();
@@ -579,11 +588,29 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			String propertyName = properties[1];
 			AggregatedDevice deviceToBeControlled = aggregatedDevices.get(deviceId);
 			String[] deviceDetails = deviceId.split(SembientAggregatorConstant.DASH);
+			// Validate if device id is built base on <device type>-<customer id>-<building id>-<floor name>-<device name>
 			int lastIndex = deviceDetails.length - 1;
+			int previousIndex = lastIndex - 1;
+			int lastTwoIndex = lastIndex - 2;
+			List<String> floorNames = new ArrayList<>();
+			List<String> buildingIDs = new ArrayList<>();
 			String deviceName = deviceDetails[lastIndex];
-			String floorName = deviceDetails[lastIndex - 1];
-			String buildingID = deviceDetails[lastIndex - 2];
-
+			if (previousIndex < 0 || lastTwoIndex < 0) {
+				throw new IllegalArgumentException("Failed to perform control operation with wrong device ID format.");
+			}
+			String floorName = deviceDetails[previousIndex];
+			String buildingID = deviceDetails[lastTwoIndex];
+			if (deviceName == null) {
+				throw new IllegalArgumentException("Failed to perform control operation with wrong device ID format.");
+			}
+			for (BuildingResponse response : cachedBuildings) {
+				buildingIDs.add(response.getBuildingID());
+				floorNames.addAll(Arrays.asList(response.getFloors()));
+			}
+			if (!deviceToBeControlled.getDeviceName().equals(deviceName) || !floorNames.contains(floorName) || !buildingIDs.contains(buildingID)) {
+				throw new IllegalArgumentException("Failed to perform control operation with wrong device ID format.");
+			}
+			//
 			Map<String, String> statFromCached = deviceToBeControlled.getProperties();
 			List<AdvancedControllableProperty> controlFromCached = deviceToBeControlled.getControllableProperties();
 			if (SembientAggregatorConstant.OCCUPANCY_LIST.equals(groupName) && SembientAggregatorConstant.HOUR.equals(propertyName)) {
@@ -591,7 +618,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				aggregatedDeviceHourMap.put(deviceId, (String) controllableProperty.getValue());
 				OccupancyData[] occupancyData = aggregatedDeviceOccupancyMap.get(deviceId);
 				if (occupancyData == null) {
-					throw new ResourceNotReachableException("Fail to control OccupancyList, Hour dropdown.");
+					throw new IllegalArgumentException("Failed to control OccupancyList, Hour dropdown.");
 				}
 				for (OccupancyData data : occupancyData) {
 					if (hourValue.equals(data.getHour())) {
@@ -653,19 +680,19 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						try {
 							createRegionTagWrapperControl = this.doPut(createRequestBuilder.toString(), null, RegionTagWrapperControl.class);
 						} catch (CommandFailureException e) {
-							logger.error("Fail to create with status code: " + e.getStatusCode() + ", value: " + newTag, e);
+							logger.error("Failed to create with status code: " + e.getStatusCode() + ", value: " + newTag, e);
 							if (e.getStatusCode() == 429) {
-								throw new IllegalStateException("Too many request, please try to create region tag with value: " + newTag + " later.");
+								throw new IllegalStateException("Too many requests, please try to create region tag with value: " + newTag + " later.");
 							} else {
-								throw new IllegalStateException("Fail to create region tag with value: " + newTag);
+								throw new IllegalStateException("Failed to create region tag with value: " + newTag);
 							}
 						} catch (Exception e) {
-							logger.error("Exception occur when creating region tag with value: " + newTag, e);
-							throw new IllegalStateException("Fail to create region tag with value: " + newTag);
+							logger.error("Exception occurred when creating region tag with value: " + newTag, e);
+							throw new IllegalStateException("Failed to create region tag with value: " + newTag);
 						}
 						if (createRegionTagWrapperControl != null) {
 							if (!SembientAggregatorConstant.STATUS_CODE_200.equals(createRegionTagWrapperControl.getStatusCode())) {
-								throw new IllegalStateException("Fail to create region with value is: " + controllableProperty.getValue());
+								throw new IllegalStateException("Failed to create region with value is: " + controllableProperty.getValue());
 							}
 							lastNewTag.put(deviceId, SembientAggregatorConstant.EMPTY);
 							// get old tags
@@ -728,15 +755,15 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							aggregatedDeviceTagMap.put(deviceId, options.get(0));
 							controlFromCached.add(createDropdown(statFromCached, SembientAggregatorConstant.PROPERTY_TAG, options, options.get(0)));
 						} catch (CommandFailureException e) {
-							logger.error("Fail to delete with status code: " + e.getStatusCode() + ", value: " + valueToBeDelete, e);
+							logger.error("Failed to delete with status code: " + e.getStatusCode() + ", value: " + valueToBeDelete, e);
 							if (e.getStatusCode() == 429) {
-								throw new IllegalStateException("Too many request, please try to delete with value: " + valueToBeDelete + " later.");
+								throw new IllegalStateException("Too many requests, please try to delete with value: " + valueToBeDelete + " later.");
 							} else {
-								throw new IllegalStateException("Fail to delete region tag with value: " + valueToBeDelete);
+								throw new IllegalStateException("Failed to delete region tag with value: " + valueToBeDelete);
 							}
 						} catch (Exception e) {
-							logger.error("Exception occur when deleting region tag with value: " + valueToBeDelete, e);
-							throw new IllegalStateException("Fail to delete region tag with value: " + valueToBeDelete);
+							logger.error("Exception occurred when deleting region tag with value: " + valueToBeDelete, e);
+							throw new IllegalStateException("Failed to delete region tag with value: " + valueToBeDelete);
 						}
 						break;
 					default:
@@ -957,7 +984,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				loginResponse.setExpirationTime(currentTime + loginResponse.getExp() * 1000L);
 			} catch (Exception e) {
 				logger.error(String.format("An exception occur when trying to log in with username: %s, password: %s, error message: %s", this.getLogin(), this.getPassword(), e.getMessage()), e);
-				throw new FailedLoginException(String.format("Fail to login with username: %s, password: %s", this.getLogin(), this.getPassword()));
+				throw new FailedLoginException(String.format("Failed to login with username: %s, password: %s", this.getLogin(), this.getPassword()));
 			}
 		}
 	}
