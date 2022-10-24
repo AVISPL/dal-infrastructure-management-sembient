@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1178,37 +1179,32 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get air quality wrapper
 	 */
 	void retrieveSensors(String buildingID, String buildingName, String floorName) throws Exception {
-		// Get current date:
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(SembientAggregatorConstant.YYYY_MM_DD);
-		LocalDate now = LocalDate.now(ZoneId.of(SembientAggregatorConstant.UTC_TIMEZONE));
-		// Get yesterday:
-		LocalDate yesterday = LocalDate.now(ZoneId.of(SembientAggregatorConstant.UTC_TIMEZONE)).minusDays(1);
-		String currentDate = formatter.format(now);
-		String yesterdayDate = formatter.format(yesterday);
-
-		AirQualityWrapper airQualityWrapper = doGetWithRetry(
-				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-						+ SembientAggregatorConstant.SLASH + currentDate, AirQualityWrapper.class);
-		if (airQualityWrapper != null) {
-			AirQualitySensorResponse[] airQualitySensorResponses = new AirQualitySensorResponse[0];
-			if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
-				airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
-			}
-			if (airQualitySensorResponses.length == 0) {
-				airQualityWrapper = doGetWithRetry(
-						SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-								+ SembientAggregatorConstant.SLASH + yesterdayDate, AirQualityWrapper.class);
-				if (airQualityWrapper != null) {
-					if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
-						airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
-					}
-					if (airQualitySensorResponses.length == 0) {
-						return;
+		String request;
+		request = SembientAggregatorConstant.COMMAND_SPACE_REGIONS + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName;
+		RegionWrapper regionWrapper = this.doGetWithRetry(request, RegionWrapper.class);
+		Map<String, String> sensors = new HashMap<>();
+		if (regionWrapper != null) {
+			RegionResponse[] regionResponses = regionWrapper.getRegionResponse();
+			if (regionResponses.length != 0) {
+				for (RegionResponse response : regionResponses
+				) {
+					String regionName = response.getRegionName();
+					String[] sensorNames = response.getSensors();
+					for (String sensorName : sensorNames) {
+						if (sensors.get(sensorName) == null) {
+							sensors.put(sensorName, regionName);
+						} else {
+							String value = sensors.get(sensorName);
+							if (!value.contains(regionName)) {
+								value += SembientAggregatorConstant.COMMA + regionName;
+								sensors.put(sensorName, value);
+							}
+						}
 					}
 				}
 			}
-			for (AirQualitySensorResponse sensorResponse : airQualitySensorResponses) {
-				String sensorName = sensorResponse.getSensorName();
+			for (Entry<String, String> sensorResponse : sensors.entrySet()) {
+				String sensorName = sensorResponse.getKey();
 				boolean isContinue = false;
 				// Filter by device name:
 				if (StringUtils.isNotNullOrEmpty(deviceNameFilter)) {
@@ -1237,8 +1233,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				if (aggregatedDevices.get(deviceID) != null && !aggregatedDevices.get(deviceID).getProperties().isEmpty()) {
 					properties = aggregatedDevices.get(deviceID).getProperties();
 				} else {
-					if (!SembientAggregatorConstant.EMPTY.equals(sensorResponse.getRegionName())) {
-						properties.put(SembientAggregatorConstant.REGIONS, sensorResponse.getRegionName());
+					if (!SembientAggregatorConstant.EMPTY.equals(sensorResponse.getValue())) {
+						properties.put(SembientAggregatorConstant.REGIONS, sensorResponse.getValue());
 					}
 					properties.put(SembientAggregatorConstant.BUILDING_NAME, buildingName);
 					properties.put(SembientAggregatorConstant.FLOOR_NAME, floorName);
