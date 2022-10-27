@@ -141,14 +141,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				if (aggregatedDevicesCount == 0) {
 					continue mainloop;
 				}
-				while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
-					try {
-						TimeUnit.MILLISECONDS.sleep(1000);
-					} catch (InterruptedException e) {
-						//
-					}
+				if (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
+					continue;
 				}
-
 				for (AggregatedDevice aggregatedDevice : aggregatedDevices.values()) {
 					if (!inProgress) {
 						break;
@@ -254,7 +249,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * is set to currentTime + 30s, at the same time, calling {@link #retrieveMultipleStatistics()} and updating the
 	 * {@link #aggregatedDevices} resets it to the currentTime timestamp, which will re-activate data collection.
 	 */
-	private long nextDevicesCollectionIterationTimestamp;
+	private volatile long nextDevicesCollectionIterationTimestamp;
 
 	/**
 	 * Executor that runs all the async operations, that {@link #deviceDataLoader} is posting and
@@ -554,7 +549,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			logger.debug("Internal destroy is called.");
 		}
 		serviceRunning = false;
-
+		validRetrieveStatisticsTimestamp = 0;
+		validBuildingAndFloorMetaDataRetrievalPeriodTimestamp = 0;
 		if (deviceDataLoader != null) {
 			deviceDataLoader.stop();
 			deviceDataLoader = null;
@@ -881,6 +877,15 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics() throws Exception {
+		if (logger.isDebugEnabled()) {
+			logger.debug(String.format("Adapter initialized: %s, executorService exists: %s, serviceRunning: %s", isInitialized(), executorService != null, serviceRunning));
+		}
+		if (executorService == null) {
+			// Due to the bug that after changing properties on fly - the adapter is destroyed but adapter is not initialized properly,
+			// so executor service is not running. We need to make sure executorService exists
+			executorService = Executors.newFixedThreadPool(8);
+			executorService.submit(deviceDataLoader = new SembientDeviceDataLoader());
+		}
 		updateValidRetrieveStatisticsTimestamp();
 		return aggregatedDevices.values().stream().collect(Collectors.toList());
 	}
