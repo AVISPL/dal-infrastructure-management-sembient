@@ -1352,6 +1352,16 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception when fail to get region tags
 	 */
 	private void populateRegionTag(Map<String, String> properties, List<AdvancedControllableProperty> controls, String deviceId) throws Exception {
+		// Remove old cached region tag properties
+		properties.remove(SembientAggregatorConstant.REGION_TAG_NEW_TAG);
+		controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
+		properties.remove(SembientAggregatorConstant.REGION_TAG_CREATE);
+		controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_CREATE));
+		properties.remove(SembientAggregatorConstant.PROPERTY_TAG);
+		controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_TAG));
+		properties.remove(SembientAggregatorConstant.PROPERTY_DELETE);
+		controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.PROPERTY_DELETE));
+		//
 		controls.add(createText(properties, SembientAggregatorConstant.REGION_TAG_NEW_TAG, lastNewTag.get(deviceId)));
 		controls.add(createButton(properties, SembientAggregatorConstant.REGION_TAG_CREATE, SembientAggregatorConstant.LABEL_CREATE, SembientAggregatorConstant.LABEL_PRESSED_CREATING));
 		String[] regionDetails = deviceId.split(SembientAggregatorConstant.DASH);
