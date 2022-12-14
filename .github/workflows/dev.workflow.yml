@@ -6,6 +6,7 @@ on:
       - develop
       - 'feature/**'
       - 'bugfix/**'
+      - 'hotfix/**'
 
 jobs:
   prep:
