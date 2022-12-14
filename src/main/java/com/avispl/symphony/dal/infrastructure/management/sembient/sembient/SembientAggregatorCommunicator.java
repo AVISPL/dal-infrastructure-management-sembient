@@ -172,7 +172,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					long interval;
 					try {
 						int pollingInInt = Integer.parseInt(pollingCycle);
-						if (pollingInInt < 1) {
+						if (pollingInInt < SembientAggregatorConstant.DEFAULT_POLLING_CYCLE) {
 							pollingInInt = SembientAggregatorConstant.DEFAULT_POLLING_CYCLE;
 						}
 						interval = pollingInInt * SembientAggregatorConstant.MINUTE_TO_MS;
@@ -358,6 +358,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private String pollingCycle;
 
 	/**
+	 * Property that define when will the adapter fetch new data of Thermal, Airquality, Occupancy  and get too many request error
+	 * then store to {@link SembientAggregatorCommunicator#cachedBuildings}
+	 */
+	private String retryInterval;
+
+
+	/**
 	 * Retrieves {@link #regionTypeFilter}
 	 *
 	 * @return value of {@link #regionTypeFilter}
@@ -519,6 +526,24 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	public void setTempResponse(String tempResponse) {
 		this.tempResponse = tempResponse;
+	}
+
+	/**
+	 * Retrieves {@link #retryInterval}
+	 *
+	 * @return value of {@link #retryInterval}
+	 */
+	public String getRetryInterval() {
+		return retryInterval;
+	}
+
+	/**
+	 * Sets {@link #retryInterval} value
+	 *
+	 * @param retryInterval new value of {@link #retryInterval}
+	 */
+	public void setRetryInterval(String retryInterval) {
+		this.retryInterval = retryInterval;
 	}
 
 	/**
@@ -1784,7 +1809,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				break;
 			}
 			try {
-				TimeUnit.MILLISECONDS.sleep(500);
+				TimeUnit.MILLISECONDS.sleep(getRetryIntervalFromUserInput());
 			} catch (InterruptedException exception) {
 				//
 			}
@@ -1847,5 +1872,25 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		dropDown.setOptions(values.toArray(new String[0]));
 		dropDown.setLabels(values.toArray(new String[0]));
 		return new AdvancedControllableProperty(name, new Date(), dropDown, initialValue);
+	}
+
+	/**
+	 * Handle retry interval from user input
+	 * @return retryInterval retry interval in long value
+	 */
+	private long getRetryIntervalFromUserInput() {
+		long retryIntervalInLong;
+		try {
+			retryIntervalInLong = Long.parseLong(getRetryInterval()) * 1000;
+			if (retryIntervalInLong < 0){
+				retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+			}
+			if (retryIntervalInLong >= SembientAggregatorConstant.REST_COMMUNICATOR_TIMEOUT){
+				retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+			}
+		} catch (Exception e) {
+			retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+		}
+		return retryIntervalInLong;
 	}
 }

@@ -34,6 +34,8 @@ public class SembientAggregatorConstant {
 	public static final String HOUR = "Hour";
 	public static final int DEFAULT_INSTALLATION_LAYOUT_POLLING_CYCLE = 10;
 	public static final int DEFAULT_POLLING_CYCLE = 30;
+	public static final int DEFAULT_RETRY_INTERVAL = 5000;
+	public static final int REST_COMMUNICATOR_TIMEOUT = 30000;
 	public static final String REGION_TAG_NEW_TAG = "RegionTags#NewTag";
 	public static final String REGION_TAG_CREATE = "RegionTags#CreateNewTag";
 	public static final String LABEL_PRESSED_CREATING = "Creating";
