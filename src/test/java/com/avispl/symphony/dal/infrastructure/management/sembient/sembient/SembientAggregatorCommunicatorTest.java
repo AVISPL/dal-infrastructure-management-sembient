@@ -28,10 +28,11 @@ class SembientAggregatorCommunicatorTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		communicator = new SembientAggregatorCommunicator();
-		communicator.setHost("127.0.0.1");
-		communicator.setProtocol("http");
+		communicator.setHost("api.sembient.com");
+		communicator.setProtocol("https");
 		communicator.setContentType("application/json");
+		communicator.setLogin("Anh.Quach@avispl.com");
+		communicator.setPassword("useforTMA");
 		communicator.init();
 	}
 
