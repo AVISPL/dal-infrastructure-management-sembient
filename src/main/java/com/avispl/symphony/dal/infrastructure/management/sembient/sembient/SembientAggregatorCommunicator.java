@@ -363,6 +363,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	private String retryInterval;
 
+	/**
+	 * Property that define when will the adapter fetch new data of Thermal, Airquality, Occupancy  and get too many request error
+	 * then store to {@link SembientAggregatorCommunicator#cachedBuildings}
+	 */
+	private String numberOfRetry;
+
 
 	/**
 	 * Retrieves {@link #regionTypeFilter}
@@ -544,6 +550,24 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	public void setRetryInterval(String retryInterval) {
 		this.retryInterval = retryInterval;
+	}
+
+	/**
+	 * Retrieves {@link #numberOfRetry}
+	 *
+	 * @return value of {@link #numberOfRetry}
+	 */
+	public String getNumberOfRetry() {
+		return numberOfRetry;
+	}
+
+	/**
+	 * Sets {@link #numberOfRetry} value
+	 *
+	 * @param numberOfRetry new value of {@link #numberOfRetry}
+	 */
+	public void setNumberOfRetry(String numberOfRetry) {
+		this.numberOfRetry = numberOfRetry;
 	}
 
 	/**
@@ -1788,8 +1812,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private <T> T doGetWithRetry(String url, Class<T> clazz) {
 		int retryAttempts = 0;
 		Exception lastError = null;
+		int numberOfRetry = getNumberOfRetryFromUserInput();
+		long retryInterval = getRetryIntervalFromUserInput();
+		logger.debug("number of retry: " + numberOfRetry);
+		logger.debug("retry interval: " + retryInterval);
 
-		while (retryAttempts++ < SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
+		while (retryAttempts++ < numberOfRetry && serviceRunning) {
 			try {
 				return doGet(url, clazz);
 			} catch (CommandFailureException e) {
@@ -1799,6 +1827,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					// cycling this failed request until it's fixed. So we need to skip this scenario.
 					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
 					break;
+				} else {
+					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
 				}
 			} catch (Exception e) {
 				lastError = e;
@@ -1809,13 +1839,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				break;
 			}
 			try {
-				TimeUnit.MILLISECONDS.sleep(getRetryIntervalFromUserInput());
+				TimeUnit.MILLISECONDS.sleep(retryInterval);
 			} catch (InterruptedException exception) {
 				//
 			}
 		}
 
-		if (retryAttempts == SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
+		if (retryAttempts == numberOfRetry && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
@@ -1876,21 +1906,45 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 
 	/**
 	 * Handle retry interval from user input
+	 *
 	 * @return retryInterval retry interval in long value
 	 */
 	private long getRetryIntervalFromUserInput() {
-		long retryIntervalInLong;
+		long retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
 		try {
-			retryIntervalInLong = Long.parseLong(getRetryInterval()) * 1000;
-			if (retryIntervalInLong < 0){
-				retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
-			}
-			if (retryIntervalInLong >= SembientAggregatorConstant.REST_COMMUNICATOR_TIMEOUT){
-				retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+			if (StringUtils.isNotNullOrEmpty(getRetryInterval())) {
+				retryIntervalInLong = Long.parseLong(getRetryInterval()) * 1000;
+				if (retryIntervalInLong <= 0) {
+					retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+				}
+				if (retryIntervalInLong >= SembientAggregatorConstant.REST_COMMUNICATOR_TIMEOUT) {
+					retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+				}
 			}
 		} catch (Exception e) {
-			retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+			logger.error(String.format("Invalid retry interval value: %s", getRetryInterval()));
 		}
 		return retryIntervalInLong;
+	}
+
+	/**
+	 * Handle number of retry from user input
+	 *
+	 * @return numberOfRetry number of retry in integer value
+	 */
+	private int getNumberOfRetryFromUserInput() {
+		int numberOfRetry = SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY;
+
+		try {
+			if (StringUtils.isNotNullOrEmpty(getNumberOfRetry())) {
+				numberOfRetry = Integer.parseInt(getNumberOfRetry());
+				if (numberOfRetry <= 0) {
+					numberOfRetry = SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY;
+				}
+			}
+		} catch (Exception e) {
+			logger.error(String.format("Invalid number of retry value: %s", getNumberOfRetry()));
+		}
+		return numberOfRetry;
 	}
 }
