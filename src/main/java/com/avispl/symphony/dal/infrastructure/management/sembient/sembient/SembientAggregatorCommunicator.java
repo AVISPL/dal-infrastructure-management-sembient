@@ -374,7 +374,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	/**
 	 * Stored too many request error endpoint
 	 */
-	private Map<String, String> cachedTooManyRequestError = new ConcurrentHashMap<>();
+	private Set<String> cachedTooManyRequestError = ConcurrentHashMap.newKeySet();
 
 
 	/**
@@ -1383,7 +1383,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int lastIndex = rawBuildingInfo.length - 1;
 		String buildingID = rawBuildingInfo[lastIndex - 2];
 		String floorName = rawBuildingInfo[lastIndex - 1];
-		int numberOfRetryInLong = getNumberOfRetryFromUserInput();
+		int numberOfRetryInInt = getNumberOfRetryFromUserInput();
 		long retryIntervalInLong = getRetryIntervalFromUserInput();
 		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getDeviceType())) {
 			// Retrieve IAQ data
@@ -1392,49 +1392,43 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			CompletableFuture<Boolean> thermalFuture = CompletableFuture.supplyAsync(() -> populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName));
 
 			iaqFuture.thenApply(result -> {
-				if (result) {
+				if (!result) {
 					int attemptRetry = 1;
-					boolean isRetry;
+					boolean isHavingData;
 					do {
-						long nextRetryDateTime = System.currentTimeMillis() + retryIntervalInLong;
 						// wait to next retry interval
-						do {
-							try {
-								Thread.sleep(200);
-							} catch (InterruptedException e) {
-								logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
-							}
-						} while (System.currentTimeMillis() <= nextRetryDateTime);
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
 
-						isRetry = populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
-						if (!isRetry) {
+						isHavingData = populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
+						if (isHavingData) {
 							break;
 						}
-					} while (attemptRetry++ < numberOfRetryInLong);
+					} while (attemptRetry++ < numberOfRetryInInt);
 				}
 				return false;
 			});
 
 			thermalFuture.thenApply(result -> {
-				if (result) {
-					int attemptRetry = 0;
-					boolean isRetry;
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
 					do {
-						long nextRetryDateTime = System.currentTimeMillis() + retryIntervalInLong;
 						// wait to next retry interval
-						do {
-							try {
-								Thread.sleep(200);
-							} catch (InterruptedException e) {
-								logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
-							}
-						} while (System.currentTimeMillis() <= nextRetryDateTime);
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
 
-						isRetry = populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
-						if (!isRetry) {
+						isHavingData = populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
+						if (isHavingData) {
 							break;
 						}
-					} while (attemptRetry++ < numberOfRetryInLong);
+					} while (attemptRetry++ < numberOfRetryInInt);
 				}
 				return false;
 			});
@@ -1447,48 +1441,41 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					() -> populateRegionTag(properties, controls, deviceId));
 
 			occupancyFuture.thenApply(result -> {
-				if (result) {
-					int attemptRetry = 0;
-					boolean isRetry;
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
 					do {
-						long nextRetryDateTime = System.currentTimeMillis() + retryIntervalInLong;
 						// wait to next retry interval
-						do {
-							try {
-								Thread.sleep(200);
-							} catch (InterruptedException e) {
-								logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
-							}
-						} while (System.currentTimeMillis() <= nextRetryDateTime);
-
-						isRetry = populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName);
-						if (!isRetry) {
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
+						isHavingData = populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName);
+						if (isHavingData) {
 							break;
 						}
-					} while (attemptRetry++ < numberOfRetryInLong);
+					} while (attemptRetry++ < numberOfRetryInInt);
 				}
 				return false;
 			});
 			regionTagFuture.thenApply(result -> {
-				if (result) {
-					int attemptRetry = 0;
-					boolean isRetry;
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
 					do {
-						long nextRetryDateTime = System.currentTimeMillis() + retryIntervalInLong;
 						// wait to next retry interval
-						do {
-							try {
-								Thread.sleep(200);
-							} catch (InterruptedException e) {
-								logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
-							}
-						} while (System.currentTimeMillis() <= nextRetryDateTime);
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
 
-						isRetry = populateRegionTag(properties, controls, deviceId);
-						if (!isRetry) {
+						isHavingData = populateRegionTag(properties, controls, deviceId);
+						if (isHavingData) {
 							break;
 						}
-					} while (attemptRetry++ < numberOfRetryInLong);
+					} while (attemptRetry++ < numberOfRetryInInt);
 				}
 				return false;
 			});
@@ -1529,8 +1516,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		RegionTagWrapperMonitor regionTagWrapperControl = this.doGetWithRetryForWorkerThread(request, RegionTagWrapperMonitor.class);
 		// Get getRegionResponse by first index because it only has 1 element.
 		// There are some cases that getRegionResponse array is empty
-		if (regionTagWrapperControl == null && cachedTooManyRequestError.containsKey(request)) {
-			return true;
+		if (regionTagWrapperControl == null && cachedTooManyRequestError.contains(request)) {
+			cachedTooManyRequestError.remove(request);
+			return false;
 		}
 		if (regionTagWrapperControl != null && regionTagWrapperControl.getRegionResponse().length != 0 && regionTagWrapperControl.getRegionResponse()[0].getRegionTags().length != 0) {
 			String[] regionTags = regionTagWrapperControl.getRegionResponse()[0].getRegionTags();
@@ -1550,7 +1538,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, tags, currentTag));
 			controls.add(createButton(properties, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
 		}
-		return false;
+		return true;
 		// Not populate Delete button and Tag dropdown if there are no tags in region
 	}
 
@@ -1570,9 +1558,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
 	private boolean populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
-		String firstUrl = SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
+		String firstRequest = SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 				+ SembientAggregatorConstant.SLASH + currentDate;
-		AirQualityWrapper airQualityWrapper = doGetWithRetryForWorkerThread(firstUrl, AirQualityWrapper.class);
+		AirQualityWrapper airQualityWrapper = doGetWithRetryForWorkerThread(firstRequest, AirQualityWrapper.class);
 		if (airQualityWrapper != null) {
 			AirQualitySensorResponse[] airQualitySensorResponses = new AirQualitySensorResponse[0];
 			if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
@@ -1595,8 +1583,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 					}
-					if (cachedTooManyRequestError.containsKey(secondRequest)) {
-						return true;
+					if (cachedTooManyRequestError.contains(secondRequest)) {
+						cachedTooManyRequestError.remove(secondRequest);
+						return false;
 					}
 				}
 			}
@@ -1660,11 +1649,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 			}
-			if (cachedTooManyRequestError.containsKey(firstUrl)) {
-				return true;
+			if (cachedTooManyRequestError.contains(firstRequest)) {
+				cachedTooManyRequestError.remove(firstRequest);
+				return false;
 			}
 		}
-		return false;
+		return true;
 	}
 
 	/**
@@ -1709,8 +1699,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
 					}
-					if (cachedTooManyRequestError.containsKey(secondRequest)) {
-						return true;
+					if (cachedTooManyRequestError.contains(secondRequest)) {
+						cachedTooManyRequestError.remove(secondRequest);
+						return false;
 					}
 				}
 			}
@@ -1800,11 +1791,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
 				populateNoData(properties, SembientAggregatorConstant.THERMAL);
 			}
-			if (cachedTooManyRequestError.containsKey(firstRequest)) {
-				return true;
+			if (cachedTooManyRequestError.contains(firstRequest)) {
+				cachedTooManyRequestError.remove(firstRequest);
+				return false;
 			}
 		}
-		return false;
+		return true;
 	}
 
 	/**
@@ -1855,9 +1847,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						SembientAggregatorConstant.COMMAND_OCCUPANCY_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 								+ SembientAggregatorConstant.SLASH + yesterdayDate;
 				occupancyWrapper = this.doGetWithRetryForWorkerThread(secondRequest, OccupancyWrapper.class);
-				if (occupancyWrapper == null && cachedTooManyRequestError.containsKey(secondRequest)) {
-					return true;
-				}
 				if (occupancyWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(occupancyWrapper.getStatusCode()) && occupancyWrapper.getOccupancyRegionWrappers() != null) {
 						occupancyRegionResponses = occupancyWrapper.getOccupancyRegionWrappers().getOccupancyRegionResponses();
@@ -1868,6 +1857,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					dateToBeDisplayed = yesterdayDate;
 				} else {
 					properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
+					if (cachedTooManyRequestError.contains(secondRequest)) {
+						cachedTooManyRequestError.remove(secondRequest);
+						return false;
+					}
 				}
 			}
 			// Remove previous properties
@@ -1927,17 +1920,18 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (!properties.containsKey(SembientAggregatorConstant.PROPERTY_HOUR)) {
 				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
 			}
-			if (cachedTooManyRequestError.containsKey(firstRequest)) {
-				return true;
+			if (cachedTooManyRequestError.contains(firstRequest)) {
+				cachedTooManyRequestError.remove(firstRequest);
+				return false;
 			}
 		}
-		return false;
+		return true;
 	}
 
 	/**
 	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
 	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
-	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
+	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between to avoid the timeout exception
 	 *
 	 * @param url to retrieve data from
 	 * @return An instance of input class
@@ -1967,7 +1961,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				break;
 			}
 			try {
-				TimeUnit.MILLISECONDS.sleep(500);
+				TimeUnit.MILLISECONDS.sleep(SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL_FOR_MAIN_THREAD);
 			} catch (InterruptedException exception) {
 				//
 			}
@@ -2007,7 +2001,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			return null;
 		}
-		cachedTooManyRequestError.put(url, String.valueOf(SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY));
+		cachedTooManyRequestError.add(url);
 		return null;
 	}
 
