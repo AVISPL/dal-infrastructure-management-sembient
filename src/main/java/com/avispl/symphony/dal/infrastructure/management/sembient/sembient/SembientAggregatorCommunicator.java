@@ -1391,6 +1391,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			// Retrieve thermal data
 			CompletableFuture<Boolean> thermalFuture = CompletableFuture.supplyAsync(() -> populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName));
 
+			// retry on 429 error
 			iaqFuture.thenApply(result -> {
 				if (!result) {
 					int attemptRetry = 1;
@@ -1412,6 +1413,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				return false;
 			});
 
+			// retry on 429 error
 			thermalFuture.thenApply(result -> {
 				if (!result) {
 					int attemptRetry = 1;
@@ -1440,6 +1442,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			CompletableFuture<Boolean> regionTagFuture = CompletableFuture.supplyAsync(
 					() -> populateRegionTag(properties, controls, deviceId));
 
+			// retry on 429 error
 			occupancyFuture.thenApply(result -> {
 				if (!result) {
 					int attemptRetry = 1;
@@ -1459,6 +1462,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 				return false;
 			});
+
+			// retry on 429 error
 			regionTagFuture.thenApply(result -> {
 				if (!result) {
 					int attemptRetry = 1;
@@ -1491,6 +1496,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param properties Map of cached properties of region (Aggregated device)
 	 * @param controls List of cached AdvancedControllableProperty of region (Aggregated device)
 	 * @param deviceId Device id of region.
+	 * @return boolean is populateData successful
 	 * @throws Exception when fail to get region tags
 	 */
 	private boolean populateRegionTag(Map<String, String> properties, List<AdvancedControllableProperty> controls, String deviceId) {
@@ -1554,12 +1560,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param buildingID building name
 	 * @param floorName floor name
 	 * @param deviceName device name
-	 * @return boolean is retry on too many requests error
+	 * @return boolean is populate data successful
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
 	private boolean populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
-		String firstRequest = SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-				+ SembientAggregatorConstant.SLASH + currentDate;
+		String firstRequest =
+				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
+						+ SembientAggregatorConstant.SLASH + currentDate;
 		AirQualityWrapper airQualityWrapper = doGetWithRetryForWorkerThread(firstRequest, AirQualityWrapper.class);
 		if (airQualityWrapper != null) {
 			AirQualitySensorResponse[] airQualitySensorResponses = new AirQualitySensorResponse[0];
@@ -1669,7 +1676,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param buildingID building ID
 	 * @param floorName floor name
 	 * @param deviceName device name
-	 * @return boolean is retry on too many request error
+	 * @return boolean is populate data successful
 	 * @throws Exception if fail to get {@link ThermalWrapper}
 	 */
 	private boolean populateThermalData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
@@ -1824,7 +1831,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param buildingID building ID
 	 * @param floorName floor name
 	 * @param regionName region name
-	 * @return boolean is retry on too many requests error
+	 * @return boolean is populate data successful
 	 * @throws Exception If fail to get {@link OccupancyWrapper} data.
 	 */
 	private boolean populateOccupancyData(Map<String, String> properties, List<AdvancedControllableProperty> controls, String currentDate, String yesterdayDate, String deviceId, String buildingID,
