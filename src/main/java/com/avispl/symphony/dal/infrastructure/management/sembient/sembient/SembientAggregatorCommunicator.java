@@ -149,11 +149,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					if (!inProgress) {
 						break;
 					}
-					try {
-						populateRegionDetails(aggregatedDevice);
-					} catch (Exception e) {
-						logger.error(String.format("Exception during Sembient '%s' data processing.", aggregatedDevice.getDeviceName()), e);
-					}
+					devicesExecutionPool.add(executorService.submit(() -> {
+						try {
+							populateRegionDetails(aggregatedDevice);
+						} catch (Exception e) {
+							logger.error(String.format("Exception during Sembient '%s' data processing.", aggregatedDevice.getDeviceName()), e);
+						}
+					}));
 				}
 				do {
 					try {
@@ -195,6 +197,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		public void stop() {
 			inProgress = false;
 		}
+
 	}
 
 	/**
@@ -1220,7 +1223,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			request = SembientAggregatorConstant.COMMAND_SPACE_REGIONS + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName;
 		}
 		RegionWrapper regionWrapper = this.doGetWithRetry(request, RegionWrapper.class);
-		// ToDo: retry method
 		if (regionWrapper != null) {
 			RegionResponse[] regionResponses = regionWrapper.getRegionResponse();
 			if (regionResponses.length != 0) {
