@@ -625,6 +625,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		cachedBuildings.clear();
 		lastNewTag.clear();
 		aggregatedDevices.clear();
+		cachedTooManyRequestError.clear();
 		super.internalDestroy();
 	}
 
@@ -1387,9 +1388,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		long retryIntervalInLong = getRetryIntervalFromUserInput();
 		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getDeviceType())) {
 			// Retrieve IAQ data
-			CompletableFuture<Boolean> iaqFuture = CompletableFuture.supplyAsync(() -> populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName));
+			CompletableFuture<Boolean> iaqFuture = CompletableFuture.supplyAsync(() -> populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
 			// Retrieve thermal data
-			CompletableFuture<Boolean> thermalFuture = CompletableFuture.supplyAsync(() -> populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName));
+			CompletableFuture<Boolean> thermalFuture = CompletableFuture.supplyAsync(() -> populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
 
 			// retry on 429 error
 			iaqFuture.thenApply(result -> {
@@ -1437,10 +1438,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		} else {
 			// Retrieve occupancy data
 			CompletableFuture<Boolean> occupancyFuture = CompletableFuture.supplyAsync(
-					() -> populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName));
+					() -> populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName), executorService);
 			// Retrieve region tags
 			CompletableFuture<Boolean> regionTagFuture = CompletableFuture.supplyAsync(
-					() -> populateRegionTag(properties, controls, deviceId));
+					() -> populateRegionTag(properties, controls, deviceId), executorService);
 
 			// retry on 429 error
 			occupancyFuture.thenApply(result -> {
@@ -1522,8 +1523,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		RegionTagWrapperMonitor regionTagWrapperControl = this.doGetWithRetryForWorkerThread(request, RegionTagWrapperMonitor.class);
 		// Get getRegionResponse by first index because it only has 1 element.
 		// There are some cases that getRegionResponse array is empty
-		if (regionTagWrapperControl == null && cachedTooManyRequestError.contains(request)) {
-			cachedTooManyRequestError.remove(request);
+		if (regionTagWrapperControl == null && cachedTooManyRequestError.remove(request)) {
 			return false;
 		}
 		if (regionTagWrapperControl != null && regionTagWrapperControl.getRegionResponse().length != 0 && regionTagWrapperControl.getRegionResponse()[0].getRegionTags().length != 0) {
@@ -1590,8 +1590,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 							+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 					}
-					if (cachedTooManyRequestError.contains(secondRequest)) {
-						cachedTooManyRequestError.remove(secondRequest);
+					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
 					}
 				}
@@ -1656,8 +1655,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 			}
-			if (cachedTooManyRequestError.contains(firstRequest)) {
-				cachedTooManyRequestError.remove(firstRequest);
+			if (cachedTooManyRequestError.remove(firstRequest)) {
 				return false;
 			}
 		}
@@ -1706,8 +1704,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
 					}
-					if (cachedTooManyRequestError.contains(secondRequest)) {
-						cachedTooManyRequestError.remove(secondRequest);
+					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
 					}
 				}
@@ -1798,8 +1795,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
 				populateNoData(properties, SembientAggregatorConstant.THERMAL);
 			}
-			if (cachedTooManyRequestError.contains(firstRequest)) {
-				cachedTooManyRequestError.remove(firstRequest);
+			if (cachedTooManyRequestError.remove(firstRequest)) {
 				return false;
 			}
 		}
@@ -1864,8 +1860,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					dateToBeDisplayed = yesterdayDate;
 				} else {
 					properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
-					if (cachedTooManyRequestError.contains(secondRequest)) {
-						cachedTooManyRequestError.remove(secondRequest);
+					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
 					}
 				}
@@ -1927,8 +1922,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (!properties.containsKey(SembientAggregatorConstant.PROPERTY_HOUR)) {
 				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
 			}
-			if (cachedTooManyRequestError.contains(firstRequest)) {
-				cachedTooManyRequestError.remove(firstRequest);
+			if (cachedTooManyRequestError.remove(firstRequest)) {
 				return false;
 			}
 		}
