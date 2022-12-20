@@ -1940,7 +1940,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private <T> T doGetWithRetry(String url, Class<T> clazz) {
 		int retryAttempts = 0;
 		Exception lastError = null;
-		while (retryAttempts++ < SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY && serviceRunning) {
+		int retryIntervalInInt = getNumberOfRetryFromUserInput();
+		Long retryIntervalInLong = getRetryIntervalFromUserInput();
+		while (retryAttempts++ < retryIntervalInInt && serviceRunning) {
 			try {
 				return doGet(url, clazz);
 			} catch (CommandFailureException e) {
@@ -1962,13 +1964,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				break;
 			}
 			try {
-				TimeUnit.MILLISECONDS.sleep(SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL_FOR_MAIN_THREAD);
+				TimeUnit.MILLISECONDS.sleep(retryIntervalInLong);
 			} catch (InterruptedException exception) {
 				//
 			}
 		}
 
-		if (retryAttempts == SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY && serviceRunning) {
+		if (retryAttempts == retryIntervalInInt && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
