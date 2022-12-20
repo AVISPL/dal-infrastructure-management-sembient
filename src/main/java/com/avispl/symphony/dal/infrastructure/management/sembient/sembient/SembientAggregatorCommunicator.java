@@ -368,7 +368,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * Property that define when will the adapter fetch new data of Thermal, Airquality, Occupancy  and get too many request error
 	 * then store to {@link SembientAggregatorCommunicator#cachedBuildings}
 	 */
-	private String numberOfRetry;
+	private String numberOfRetries;
 
 
 	/**
@@ -560,21 +560,21 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	}
 
 	/**
-	 * Retrieves {@link #numberOfRetry}
+	 * Retrieves {@link #numberOfRetries}
 	 *
-	 * @return value of {@link #numberOfRetry}
+	 * @return value of {@link #numberOfRetries}
 	 */
-	public String getNumberOfRetry() {
-		return numberOfRetry;
+	public String getNumberOfRetries() {
+		return numberOfRetries;
 	}
 
 	/**
-	 * Sets {@link #numberOfRetry} value
+	 * Sets {@link #numberOfRetries} value
 	 *
-	 * @param numberOfRetry new value of {@link #numberOfRetry}
+	 * @param numberOfRetries new value of {@link #numberOfRetries}
 	 */
-	public void setNumberOfRetry(String numberOfRetry) {
-		this.numberOfRetry = numberOfRetry;
+	public void setNumberOfRetries(String numberOfRetries) {
+		this.numberOfRetries = numberOfRetries;
 	}
 
 	/**
@@ -2092,14 +2092,14 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int numberOfRetry = SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY;
 
 		try {
-			if (StringUtils.isNotNullOrEmpty(getNumberOfRetry())) {
-				numberOfRetry = Integer.parseInt(getNumberOfRetry());
+			if (StringUtils.isNotNullOrEmpty(getNumberOfRetries())) {
+				numberOfRetry = Integer.parseInt(getNumberOfRetries());
 				if (numberOfRetry <= 0) {
 					numberOfRetry = SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY;
 				}
 			}
 		} catch (Exception e) {
-			logger.error(String.format("Invalid number of retry value: %s", getNumberOfRetry()));
+			logger.error(String.format("Invalid number of retry value: %s", getNumberOfRetries()));
 		}
 		return numberOfRetry;
 	}
