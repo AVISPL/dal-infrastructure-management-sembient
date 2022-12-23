@@ -1145,7 +1145,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					if (floor.trim().equals(floorName)) {
 						retrieveDevices(buildingID, buildingName, floor, null);
 					}
-
 				}
 			}
 		} else {
