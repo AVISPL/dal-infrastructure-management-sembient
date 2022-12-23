@@ -1143,29 +1143,14 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			for (String floor : listFloorToBeFilter) {
 				for (String floorName : floorNames) {
 					if (floor.trim().equals(floorName)) {
-						// Filter by region type
-//						if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
-//							String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
-//							for (String type : listTypeToBeFilter) {
-//								retrieveDevices(buildingID, buildingName, floor, type.trim());
-//							}
-//						} else {
 						retrieveDevices(buildingID, buildingName, floor, null);
-//						}
 					}
 
 				}
 			}
 		} else {
 			for (String floorName : floorNames) {
-//				if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
-//					String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
-//					for (String type : listTypeToBeFilter) {
-//						retrieveDevices(buildingID, buildingName, floorName, type.trim());
-//					}
-//				} else {
 				retrieveDevices(buildingID, buildingName, floorName, null);
-//				}
 			}
 		}
 	}
