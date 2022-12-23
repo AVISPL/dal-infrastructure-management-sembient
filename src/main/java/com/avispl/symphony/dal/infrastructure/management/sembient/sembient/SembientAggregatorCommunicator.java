@@ -337,8 +337,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private String deviceNameFilter;
 
 	/**
-	 * List of device types to be filtered
+	 * @deprecated List of device types to be filtered
 	 */
+	@Deprecated
 	private String deviceTypeFilter;
 
 	/**
@@ -467,20 +468,22 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		this.deviceNameFilter = deviceNameFilter;
 	}
 
+
 	/**
-	 * Retrieves {@link #deviceTypeFilter}
-	 *
 	 * @return value of {@link #deviceTypeFilter}
+	 * @deprecated Retrieves {@link #deviceTypeFilter}
 	 */
+	@Deprecated
 	public String getDeviceTypeFilter() {
 		return deviceTypeFilter;
 	}
 
+
 	/**
-	 * Sets {@link #deviceTypeFilter} value
-	 *
 	 * @param deviceTypeFilter new value of {@link #deviceTypeFilter}
+	 * @deprecated Sets {@link #deviceTypeFilter} value
 	 */
+	@Deprecated
 	public void setDeviceTypeFilter(String deviceTypeFilter) {
 		this.deviceTypeFilter = deviceTypeFilter;
 	}
@@ -1141,28 +1144,28 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				for (String floorName : floorNames) {
 					if (floor.trim().equals(floorName)) {
 						// Filter by region type
-						if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
-							String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
-							for (String type : listTypeToBeFilter) {
-								retrieveDevices(buildingID, buildingName, floor, type.trim());
-							}
-						} else {
-							retrieveDevices(buildingID, buildingName, floor, null);
-						}
+//						if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
+//							String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
+//							for (String type : listTypeToBeFilter) {
+//								retrieveDevices(buildingID, buildingName, floor, type.trim());
+//							}
+//						} else {
+						retrieveDevices(buildingID, buildingName, floor, null);
+//						}
 					}
 
 				}
 			}
 		} else {
 			for (String floorName : floorNames) {
-				if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
-					String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
-					for (String type : listTypeToBeFilter) {
-						retrieveDevices(buildingID, buildingName, floorName, type.trim());
-					}
-				} else {
-					retrieveDevices(buildingID, buildingName, floorName, null);
-				}
+//				if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
+//					String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
+//					for (String type : listTypeToBeFilter) {
+//						retrieveDevices(buildingID, buildingName, floorName, type.trim());
+//					}
+//				} else {
+				retrieveDevices(buildingID, buildingName, floorName, null);
+//				}
 			}
 		}
 	}
@@ -1187,9 +1190,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			} else {
 				retrieveRegions(buildingID, buildingName, floorName, null);
+				// 2. Fetch sensors
+				retrieveSensors(buildingID, buildingName, floorName);
 			}
-			// 2. Fetch sensors
-			retrieveSensors(buildingID, buildingName, floorName);
 		} else {
 			if (deviceType.equals(SembientAggregatorConstant.SENSOR)) {
 				retrieveSensors(buildingID, buildingName, floorName);
@@ -1287,8 +1290,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						SembientAggregatorConstant.SENSOR + SembientAggregatorConstant.DASH + loginResponse.getCustomerId() + SembientAggregatorConstant.DASH + buildingID + SembientAggregatorConstant.DASH
 								+ floorName + SembientAggregatorConstant.DASH + sensorName;
 				sensorDevice.setDeviceId(deviceID);
-				sensorDevice.setCategory(SembientAggregatorConstant.SENSOR);
-				sensorDevice.setDeviceType(SembientAggregatorConstant.SENSOR);
+				sensorDevice.setType(SembientAggregatorConstant.DEFAULT_SENSOR_TYPE);
+				sensorDevice.setCategory(SembientAggregatorConstant.DEFAULT_SENSOR_CATEGORY);
+				sensorDevice.setDeviceMake(SembientAggregatorConstant.DEFAULT_SENSOR_MANUFACTURER);
+				sensorDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_SENSOR_MODEL);
 				sensorDevice.setDeviceOnline(true);
 				sensorDevice.setDeviceName(sensorName);
 				Map<String, String> properties = new HashMap<>();
@@ -1337,8 +1342,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			aggregatedDevice.setDeviceId(
 					SembientAggregatorConstant.REGION + SembientAggregatorConstant.DASH + loginResponse.getCustomerId() + SembientAggregatorConstant.DASH + buildingID + SembientAggregatorConstant.DASH
 							+ floorName + SembientAggregatorConstant.DASH + region.getRegionName());
-			aggregatedDevice.setCategory(SembientAggregatorConstant.REGION);
-			aggregatedDevice.setDeviceType(SembientAggregatorConstant.REGION);
+			aggregatedDevice.setType(SembientAggregatorConstant.DEFAULT_REGION_TYPE);
+			aggregatedDevice.setCategory(SembientAggregatorConstant.DEFAULT_REGION_CATEGORY);
+			aggregatedDevice.setDeviceMake(SembientAggregatorConstant.DEFAULT_REGION_MANUFACTURER);
+			aggregatedDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_REGION_MODEL);
 			aggregatedDevice.setDeviceOnline(true);
 			aggregatedDevice.setDeviceName(region.getRegionName());
 			// occupancy, thermal, iaq data will be populated later on.
@@ -1350,7 +1357,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			} else {
 				Map<String, String> properties = new HashMap<>();
 				properties.put(SembientAggregatorConstant.CAPACITY, region.getCapacity());
-				properties.put(SembientAggregatorConstant.REGION_TYPE, region.getRegionType());
+				properties.put(SembientAggregatorConstant.REGION_TYPE_PROPERTIES, region.getRegionType());
 				properties.put(SembientAggregatorConstant.BUILDING_NAME, buildingName);
 				properties.put(SembientAggregatorConstant.FLOOR_NAME, floorName);
 				aggregatedDevice.setProperties(properties);
@@ -1386,7 +1393,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		String floorName = rawBuildingInfo[lastIndex - 1];
 		int numberOfRetryInInt = getNumberOfRetryFromUserInput();
 		long retryIntervalInLong = getRetryIntervalFromUserInput();
-		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getDeviceType())) {
+		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getCategory())) {
 			// Retrieve IAQ data
 			CompletableFuture<Boolean> iaqFuture = CompletableFuture.supplyAsync(() -> populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
 			// Retrieve thermal data

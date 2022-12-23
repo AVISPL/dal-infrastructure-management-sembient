@@ -664,13 +664,17 @@ class SembientAggregatorCommunicatorTest {
 		long currentDateTime = System.currentTimeMillis();
 		communicator.setPollingCycle("0");
 		communicator.setRetryInterval("1");
+		communicator.setDeviceNameFilter("3005, Region_2");
+		communicator.setDeviceTypeFilter("1jkwfkeb");
+		communicator.setRegionTypeFilter("Workstations");
+		communicator.setDeviceNameFilter("");
 		communicator.getMultipleStatistics();
 		Thread.sleep(5000);
 		communicator.retrieveMultipleStatistics();
 		Thread.sleep(60000);
 		communicator.getMultipleStatistics();
 		communicator.retrieveMultipleStatistics();
-		Thread.sleep(600000);
+		Thread.sleep(60000);
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
 		communicator.retrieveMultipleStatistics();
 		SimpleDateFormat f = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);

@@ -28,6 +28,10 @@ public class SembientAggregatorConstant {
 	public static final String LABEL_CREATE = "Create";
 	public static final String AIR_QUALITY = "AirQuality";
 	public static final String SENSOR = "Sensor";
+	public static final String DEFAULT_SENSOR_CATEGORY = "Sensor";
+	public static final String DEFAULT_SENSOR_TYPE = "AV Devices";
+	public static final String DEFAULT_SENSOR_MANUFACTURER = "Sembient";
+	public static final String DEFAULT_SENSOR_MODEL = "Unknown";
 	public static final String DATE_ISO_FORMAT = "dd MMM yyyy HH:mm:ss:SSS Z";
 	public static final String HASH = "#";
 	public static final String OCCUPANCY_LIST = "OccupancyList";
@@ -114,8 +118,13 @@ public class SembientAggregatorConstant {
 	public static final String BUILDING_NAME = "BuildingName";
 	public static final String FLOOR_NAME = "FloorName";
 	public static final String REGIONS = "Regions";
+	public static final String DEFAULT_REGION_TYPE = "AV Devices";
+	public static final String DEFAULT_REGION_CATEGORY = "Sensor";
+	public static final String DEFAULT_REGION_MANUFACTURER = "Sembient";
+	public static final String DEFAULT_REGION_MODEL = "Unknown";
+
 	public static final String CAPACITY = "Capacity";
-	public static final String REGION_TYPE = "RegionType";
+	public static final String REGION_TYPE_PROPERTIES = "RegionType";
 	public static final String TEMPERATURE_AVG_F = "TemperatureAvg(F)";
 	public static final String TEMPERATURE_MAX_F = "TemperatureMax(F)";
 	public static final String TEMPERATURE_MIN_F = "TemperatureMin(F)";
