@@ -3,10 +3,11 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.sembient.sembient;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
-import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
+import java.util.TimeZone;
 
 import javax.security.auth.login.FailedLoginException;
 import org.junit.Assert;
@@ -16,16 +17,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
+import com.avispl.symphony.dal.infrastructure.management.sembient.sembient.utils.SembientAggregatorConstant;
 
 @Tag("RealDevice")
 class SembientAggregatorCommunicatorTest {
-	private SembientAggregatorCommunicator communicator;
+	private SembientAggregatorCommunicator communicator = new SembientAggregatorCommunicator();
 
 	@BeforeEach
 	void setUp() throws Exception {
-		communicator = new SembientAggregatorCommunicator();
 		communicator.setHost("api.sembient.com");
 		communicator.setProtocol("https");
 		communicator.setContentType("application/json");
@@ -650,5 +652,36 @@ class SembientAggregatorCommunicatorTest {
 		String actualMessage = exception.getMessage();
 
 		Assert.assertTrue(actualMessage.contains(expectedMessage));
+	}
+
+	/**
+	 * Test refresh interval
+	 *
+	 * @throws Exception if fail to getMultipleStatistics, retrieveMultipleStatistics
+	 */
+	@Test
+	void testAutoAssignPollingInterval() throws Exception {
+		long currentDateTime = System.currentTimeMillis();
+		communicator.setPollingCycle("0");
+		communicator.setRetryInterval("1");
+		communicator.setDeviceNameFilter("3005, Region_2");
+		communicator.setDeviceTypeFilter("1jkwfkeb");
+		communicator.setRegionTypeFilter("Workstations");
+		communicator.setDeviceNameFilter("");
+		communicator.getMultipleStatistics();
+		Thread.sleep(5000);
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(60000);
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(60000);
+		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
+		communicator.retrieveMultipleStatistics();
+		SimpleDateFormat f = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
+		f.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
+		String date = extendedStatistics.getStatistics().get("NextPollingCycle");
+		Date d = f.parse(date);
+		long nextPollingCycle = d.getTime();
+		Assert.assertTrue((currentDateTime + 30 * 60000) < nextPollingCycle);
 	}
 }
