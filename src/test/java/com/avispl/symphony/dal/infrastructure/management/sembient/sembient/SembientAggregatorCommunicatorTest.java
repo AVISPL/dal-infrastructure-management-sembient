@@ -24,7 +24,7 @@ import com.avispl.symphony.dal.infrastructure.management.sembient.sembient.utils
 
 @Tag("RealDevice")
 class SembientAggregatorCommunicatorTest {
-	private SembientAggregatorCommunicator communicator;
+	private SembientAggregatorCommunicator communicator = new SembientAggregatorCommunicator();
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -663,11 +663,20 @@ class SembientAggregatorCommunicatorTest {
 	void testAutoAssignPollingInterval() throws Exception {
 		long currentDateTime = System.currentTimeMillis();
 		communicator.setPollingCycle("0");
+		communicator.setRetryInterval("1");
+		communicator.setDeviceNameFilter("3005, Region_2");
+		communicator.setDeviceTypeFilter("1jkwfkeb");
+		communicator.setRegionTypeFilter("Workstations");
+		communicator.setDeviceNameFilter("");
 		communicator.getMultipleStatistics();
-		Thread.sleep(30000);
+		Thread.sleep(5000);
 		communicator.retrieveMultipleStatistics();
-		Thread.sleep(30000);
+		Thread.sleep(60000);
+		communicator.getMultipleStatistics();
+		communicator.retrieveMultipleStatistics();
+		Thread.sleep(60000);
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
+		communicator.retrieveMultipleStatistics();
 		SimpleDateFormat f = new SimpleDateFormat(SembientAggregatorConstant.DATE_ISO_FORMAT);
 		f.setTimeZone(TimeZone.getTimeZone(SembientAggregatorConstant.UTC_TIMEZONE));
 		String date = extendedStatistics.getStatistics().get("NextPollingCycle");
