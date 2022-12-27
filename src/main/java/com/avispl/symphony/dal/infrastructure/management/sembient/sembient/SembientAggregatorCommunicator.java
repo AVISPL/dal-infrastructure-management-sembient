@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,7 +157,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						}
 					}));
 				}
-
 				do {
 					try {
 						TimeUnit.MILLISECONDS.sleep(200);
@@ -197,6 +197,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		public void stop() {
 			inProgress = false;
 		}
+
 	}
 
 	/**
@@ -336,8 +337,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	private String deviceNameFilter;
 
 	/**
-	 * List of device types to be filtered
+	 * @deprecated List of device types to be filtered
 	 */
+	@Deprecated
 	private String deviceTypeFilter;
 
 	/**
@@ -362,6 +364,18 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * then store to {@link SembientAggregatorCommunicator#cachedBuildings}
 	 */
 	private String retryInterval;
+
+	/**
+	 * Property that define when will the adapter fetch new data of Thermal, Airquality, Occupancy  and get too many request error
+	 * then store to {@link SembientAggregatorCommunicator#cachedBuildings}
+	 */
+	private String numberOfRetries;
+
+
+	/**
+	 * Stored too many request error endpoint
+	 */
+	private Set<String> cachedTooManyRequestError = ConcurrentHashMap.newKeySet();
 
 
 	/**
@@ -454,20 +468,22 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		this.deviceNameFilter = deviceNameFilter;
 	}
 
+
 	/**
-	 * Retrieves {@link #deviceTypeFilter}
-	 *
 	 * @return value of {@link #deviceTypeFilter}
+	 * @deprecated Retrieves {@link #deviceTypeFilter}
 	 */
+	@Deprecated
 	public String getDeviceTypeFilter() {
 		return deviceTypeFilter;
 	}
 
+
 	/**
-	 * Sets {@link #deviceTypeFilter} value
-	 *
 	 * @param deviceTypeFilter new value of {@link #deviceTypeFilter}
+	 * @deprecated Sets {@link #deviceTypeFilter} value
 	 */
+	@Deprecated
 	public void setDeviceTypeFilter(String deviceTypeFilter) {
 		this.deviceTypeFilter = deviceTypeFilter;
 	}
@@ -547,6 +563,24 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	}
 
 	/**
+	 * Retrieves {@link #numberOfRetries}
+	 *
+	 * @return value of {@link #numberOfRetries}
+	 */
+	public String getNumberOfRetries() {
+		return numberOfRetries;
+	}
+
+	/**
+	 * Sets {@link #numberOfRetries} value
+	 *
+	 * @param numberOfRetries new value of {@link #numberOfRetries}
+	 */
+	public void setNumberOfRetries(String numberOfRetries) {
+		this.numberOfRetries = numberOfRetries;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -594,6 +628,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		cachedBuildings.clear();
 		lastNewTag.clear();
 		aggregatedDevices.clear();
+		cachedTooManyRequestError.clear();
 		super.internalDestroy();
 	}
 
@@ -1108,29 +1143,13 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			for (String floor : listFloorToBeFilter) {
 				for (String floorName : floorNames) {
 					if (floor.trim().equals(floorName)) {
-						// Filter by region type
-						if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
-							String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
-							for (String type : listTypeToBeFilter) {
-								retrieveDevices(buildingID, buildingName, floor, type.trim());
-							}
-						} else {
-							retrieveDevices(buildingID, buildingName, floor, null);
-						}
+						retrieveDevices(buildingID, buildingName, floor, null);
 					}
-
 				}
 			}
 		} else {
 			for (String floorName : floorNames) {
-				if (StringUtils.isNotNullOrEmpty(deviceTypeFilter)) {
-					String[] listTypeToBeFilter = deviceTypeFilter.split(SembientAggregatorConstant.COMMA);
-					for (String type : listTypeToBeFilter) {
-						retrieveDevices(buildingID, buildingName, floorName, type.trim());
-					}
-				} else {
-					retrieveDevices(buildingID, buildingName, floorName, null);
-				}
+				retrieveDevices(buildingID, buildingName, floorName, null);
 			}
 		}
 	}
@@ -1155,9 +1174,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				}
 			} else {
 				retrieveRegions(buildingID, buildingName, floorName, null);
+				// 2. Fetch sensors
+				retrieveSensors(buildingID, buildingName, floorName);
 			}
-			// 2. Fetch sensors
-			retrieveSensors(buildingID, buildingName, floorName);
 		} else {
 			if (deviceType.equals(SembientAggregatorConstant.SENSOR)) {
 				retrieveSensors(buildingID, buildingName, floorName);
@@ -1255,8 +1274,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						SembientAggregatorConstant.SENSOR + SembientAggregatorConstant.DASH + loginResponse.getCustomerId() + SembientAggregatorConstant.DASH + buildingID + SembientAggregatorConstant.DASH
 								+ floorName + SembientAggregatorConstant.DASH + sensorName;
 				sensorDevice.setDeviceId(deviceID);
-				sensorDevice.setCategory(SembientAggregatorConstant.SENSOR);
-				sensorDevice.setDeviceType(SembientAggregatorConstant.SENSOR);
+				sensorDevice.setType(SembientAggregatorConstant.DEFAULT_SENSOR_TYPE);
+				sensorDevice.setCategory(SembientAggregatorConstant.DEFAULT_SENSOR_CATEGORY);
+				sensorDevice.setDeviceMake(SembientAggregatorConstant.DEFAULT_SENSOR_MANUFACTURER);
+				sensorDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_SENSOR_MODEL);
 				sensorDevice.setDeviceOnline(true);
 				sensorDevice.setDeviceName(sensorName);
 				Map<String, String> properties = new HashMap<>();
@@ -1305,8 +1326,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			aggregatedDevice.setDeviceId(
 					SembientAggregatorConstant.REGION + SembientAggregatorConstant.DASH + loginResponse.getCustomerId() + SembientAggregatorConstant.DASH + buildingID + SembientAggregatorConstant.DASH
 							+ floorName + SembientAggregatorConstant.DASH + region.getRegionName());
-			aggregatedDevice.setCategory(SembientAggregatorConstant.REGION);
-			aggregatedDevice.setDeviceType(SembientAggregatorConstant.REGION);
+			aggregatedDevice.setType(SembientAggregatorConstant.DEFAULT_REGION_TYPE);
+			aggregatedDevice.setCategory(SembientAggregatorConstant.DEFAULT_REGION_CATEGORY);
+			aggregatedDevice.setDeviceMake(SembientAggregatorConstant.DEFAULT_REGION_MANUFACTURER);
+			aggregatedDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_REGION_MODEL);
 			aggregatedDevice.setDeviceOnline(true);
 			aggregatedDevice.setDeviceName(region.getRegionName());
 			// occupancy, thermal, iaq data will be populated later on.
@@ -1318,7 +1341,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			} else {
 				Map<String, String> properties = new HashMap<>();
 				properties.put(SembientAggregatorConstant.CAPACITY, region.getCapacity());
-				properties.put(SembientAggregatorConstant.REGION_TYPE, region.getRegionType());
+				properties.put(SembientAggregatorConstant.REGION_TYPE_PROPERTIES, region.getRegionType());
 				properties.put(SembientAggregatorConstant.BUILDING_NAME, buildingName);
 				properties.put(SembientAggregatorConstant.FLOOR_NAME, floorName);
 				aggregatedDevice.setProperties(properties);
@@ -1352,16 +1375,107 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		int lastIndex = rawBuildingInfo.length - 1;
 		String buildingID = rawBuildingInfo[lastIndex - 2];
 		String floorName = rawBuildingInfo[lastIndex - 1];
-		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getDeviceType())) {
-			// Retrieve thermal data
-			populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
+		int numberOfRetryInInt = getNumberOfRetryFromUserInput();
+		long retryIntervalInLong = getRetryIntervalFromUserInput();
+		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getCategory())) {
 			// Retrieve IAQ data
-			populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
+			CompletableFuture<Boolean> iaqFuture = CompletableFuture.supplyAsync(() -> populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
+			// Retrieve thermal data
+			CompletableFuture<Boolean> thermalFuture = CompletableFuture.supplyAsync(() -> populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
+
+			// retry on 429 error
+			iaqFuture.thenApply(result -> {
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
+					do {
+						// wait to next retry interval
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
+
+						isHavingData = populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
+						if (isHavingData) {
+							break;
+						}
+					} while (attemptRetry++ < numberOfRetryInInt);
+				}
+				return false;
+			});
+
+			// retry on 429 error
+			thermalFuture.thenApply(result -> {
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
+					do {
+						// wait to next retry interval
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
+
+						isHavingData = populateThermalData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName);
+						if (isHavingData) {
+							break;
+						}
+					} while (attemptRetry++ < numberOfRetryInInt);
+				}
+				return false;
+			});
 		} else {
 			// Retrieve occupancy data
-			populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName);
+			CompletableFuture<Boolean> occupancyFuture = CompletableFuture.supplyAsync(
+					() -> populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName), executorService);
 			// Retrieve region tags
-			populateRegionTag(properties, controls, deviceId);
+			CompletableFuture<Boolean> regionTagFuture = CompletableFuture.supplyAsync(
+					() -> populateRegionTag(properties, controls, deviceId), executorService);
+
+			// retry on 429 error
+			occupancyFuture.thenApply(result -> {
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
+					do {
+						// wait to next retry interval
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
+						isHavingData = populateOccupancyData(properties, controls, currentDate, yesterdayDate, deviceId, buildingID, floorName, deviceName);
+						if (isHavingData) {
+							break;
+						}
+					} while (attemptRetry++ < numberOfRetryInInt);
+				}
+				return false;
+			});
+
+			// retry on 429 error
+			regionTagFuture.thenApply(result -> {
+				if (!result) {
+					int attemptRetry = 1;
+					boolean isHavingData;
+					do {
+						// wait to next retry interval
+						try {
+							Thread.sleep(retryIntervalInLong);
+						} catch (InterruptedException e) {
+							logger.error(String.format("error while retrieve thermal data: %s", e.getMessage()));
+						}
+
+						isHavingData = populateRegionTag(properties, controls, deviceId);
+						if (isHavingData) {
+							break;
+						}
+					} while (attemptRetry++ < numberOfRetryInInt);
+				}
+				return false;
+			});
 		}
 		aggregatedDevice.setProperties(properties);
 		aggregatedDevice.setControllableProperties(controls);
@@ -1374,9 +1488,10 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param properties Map of cached properties of region (Aggregated device)
 	 * @param controls List of cached AdvancedControllableProperty of region (Aggregated device)
 	 * @param deviceId Device id of region.
+	 * @return boolean is populateData successful
 	 * @throws Exception when fail to get region tags
 	 */
-	private void populateRegionTag(Map<String, String> properties, List<AdvancedControllableProperty> controls, String deviceId) throws Exception {
+	private boolean populateRegionTag(Map<String, String> properties, List<AdvancedControllableProperty> controls, String deviceId) {
 		// Remove old cached region tag properties
 		properties.remove(SembientAggregatorConstant.REGION_TAG_NEW_TAG);
 		controls.removeIf(advancedControllableProperty -> advancedControllableProperty.getName().equals(SembientAggregatorConstant.REGION_TAG_NEW_TAG));
@@ -1396,9 +1511,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		String regionName = regionDetails[lastIndex];
 		String request = SembientAggregatorConstant.COMMAND_SPACE_TAGS + this.loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 				+ SembientAggregatorConstant.PARAM_REGION_NAME + regionName;
-		RegionTagWrapperMonitor regionTagWrapperControl = this.doGetWithRetry(request, RegionTagWrapperMonitor.class);
+		RegionTagWrapperMonitor regionTagWrapperControl = this.doGetWithRetryForWorkerThread(request, RegionTagWrapperMonitor.class);
 		// Get getRegionResponse by first index because it only has 1 element.
 		// There are some cases that getRegionResponse array is empty
+		if (regionTagWrapperControl == null && cachedTooManyRequestError.remove(request)) {
+			return false;
+		}
 		if (regionTagWrapperControl != null && regionTagWrapperControl.getRegionResponse().length != 0 && regionTagWrapperControl.getRegionResponse()[0].getRegionTags().length != 0) {
 			String[] regionTags = regionTagWrapperControl.getRegionResponse()[0].getRegionTags();
 			List<String> tags = new ArrayList<>(Arrays.asList(regionTags));
@@ -1417,6 +1535,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			controls.add(createDropdown(properties, SembientAggregatorConstant.PROPERTY_TAG, tags, currentTag));
 			controls.add(createButton(properties, SembientAggregatorConstant.PROPERTY_DELETE, SembientAggregatorConstant.LABEL_DELETE, SembientAggregatorConstant.LABEL_PRESSED_DELETING));
 		}
+		return true;
 		// Not populate Delete button and Tag dropdown if there are no tags in region
 	}
 
@@ -1432,33 +1551,38 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param buildingID building name
 	 * @param floorName floor name
 	 * @param deviceName device name
+	 * @return boolean is populate data successful
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
-	private void populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) throws Exception {
-		AirQualityWrapper airQualityWrapper = doGetWithRetry(
+	private boolean populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
+		String firstRequest =
 				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-						+ SembientAggregatorConstant.SLASH + currentDate, AirQualityWrapper.class);
+						+ SembientAggregatorConstant.SLASH + currentDate;
+		AirQualityWrapper airQualityWrapper = doGetWithRetryForWorkerThread(firstRequest, AirQualityWrapper.class);
 		if (airQualityWrapper != null) {
 			AirQualitySensorResponse[] airQualitySensorResponses = new AirQualitySensorResponse[0];
 			if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
 				airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
 			}
 			if (airQualitySensorResponses.length == 0) {
-				airQualityWrapper = doGetWithRetry(
+				String secondRequest =
 						SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-								+ SembientAggregatorConstant.SLASH + yesterdayDate, AirQualityWrapper.class);
+								+ SembientAggregatorConstant.SLASH + yesterdayDate;
+				airQualityWrapper = doGetWithRetryForWorkerThread(secondRequest, AirQualityWrapper.class);
 				if (airQualityWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(airQualityWrapper.getStatusCode()) && airQualityWrapper.getAirQualitySensorWrapper() != null) {
 						airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
 					}
 					if (airQualitySensorResponses.length == 0) {
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
-						return;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
 							+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+					}
+					if (cachedTooManyRequestError.remove(secondRequest)) {
+						return false;
 					}
 				}
 			}
@@ -1522,7 +1646,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
 				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
 			}
+			if (cachedTooManyRequestError.remove(firstRequest)) {
+				return false;
+			}
 		}
+		return true;
 	}
 
 	/**
@@ -1537,13 +1665,14 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param buildingID building ID
 	 * @param floorName floor name
 	 * @param deviceName device name
+	 * @return boolean is populate data successful
 	 * @throws Exception if fail to get {@link ThermalWrapper}
 	 */
-	private void populateThermalData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName)
-			throws Exception {
-		ThermalWrapper thermalWrapper = doGetWithRetry(
+	private boolean populateThermalData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
+		String firstRequest =
 				SembientAggregatorConstant.COMMAND_THERMAL_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-						+ SembientAggregatorConstant.SLASH + currentDate, ThermalWrapper.class);
+						+ SembientAggregatorConstant.SLASH + currentDate;
+		ThermalWrapper thermalWrapper = doGetWithRetryForWorkerThread(firstRequest, ThermalWrapper.class);
 		if (thermalWrapper != null) {
 			ThermalSensorResponse[] thermalSensorResponse = new ThermalSensorResponse[0];
 			if (SembientAggregatorConstant.STATUS_CODE_200.equals(thermalWrapper.getStatusCode()) && thermalWrapper.getThermalSensorWrappers() != null) {
@@ -1551,20 +1680,23 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			if (thermalSensorResponse.length == 0) {
 				// Retry with yesterday data
-				thermalWrapper = doGetWithRetry(
+				String secondRequest =
 						SembientAggregatorConstant.COMMAND_THERMAL_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-								+ SembientAggregatorConstant.SLASH + yesterdayDate, ThermalWrapper.class);
+								+ SembientAggregatorConstant.SLASH + yesterdayDate;
+				thermalWrapper = doGetWithRetryForWorkerThread(secondRequest, ThermalWrapper.class);
 				if (thermalWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(thermalWrapper.getStatusCode()) && thermalWrapper.getThermalSensorWrappers() != null) {
 						thermalSensorResponse = thermalWrapper.getThermalSensorWrappers().getThermalSensorResponses();
 					}
 					if (thermalSensorResponse.length == 0) {
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
-						return;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
+					}
+					if (cachedTooManyRequestError.remove(secondRequest)) {
+						return false;
 					}
 				}
 			}
@@ -1654,7 +1786,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
 				populateNoData(properties, SembientAggregatorConstant.THERMAL);
 			}
+			if (cachedTooManyRequestError.remove(firstRequest)) {
+				return false;
+			}
 		}
+		return true;
 	}
 
 	/**
@@ -1682,15 +1818,17 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @param buildingID building ID
 	 * @param floorName floor name
 	 * @param regionName region name
+	 * @return boolean is populate data successful
 	 * @throws Exception If fail to get {@link OccupancyWrapper} data.
 	 */
-	private void populateOccupancyData(Map<String, String> properties, List<AdvancedControllableProperty> controls, String currentDate, String yesterdayDate, String deviceId, String buildingID,
-			String floorName, String regionName) throws Exception {
+	private boolean populateOccupancyData(Map<String, String> properties, List<AdvancedControllableProperty> controls, String currentDate, String yesterdayDate, String deviceId, String buildingID,
+			String floorName, String regionName) {
 		// Retrieve data from today
 		String dateToBeDisplayed = currentDate;
-		OccupancyWrapper occupancyWrapper = this.doGetWithRetry(
+		String firstRequest =
 				SembientAggregatorConstant.COMMAND_OCCUPANCY_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-						+ SembientAggregatorConstant.SLASH + currentDate, OccupancyWrapper.class);
+						+ SembientAggregatorConstant.SLASH + currentDate;
+		OccupancyWrapper occupancyWrapper = this.doGetWithRetryForWorkerThread(firstRequest, OccupancyWrapper.class);
 		if (occupancyWrapper != null) {
 			properties.remove(SembientAggregatorConstant.PROPERTY_MESSAGE);
 			OccupancyRegionResponse[] occupancyRegionResponses = new OccupancyRegionResponse[0];
@@ -1699,21 +1837,23 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			if (occupancyRegionResponses.length == 0) {
 				// Retry one more time with yesterday data.
-				occupancyWrapper = this.doGetWithRetry(
+				String secondRequest =
 						SembientAggregatorConstant.COMMAND_OCCUPANCY_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
-								+ SembientAggregatorConstant.SLASH + yesterdayDate, OccupancyWrapper.class);
+								+ SembientAggregatorConstant.SLASH + yesterdayDate;
+				occupancyWrapper = this.doGetWithRetryForWorkerThread(secondRequest, OccupancyWrapper.class);
 				if (occupancyWrapper != null) {
 					if (SembientAggregatorConstant.STATUS_CODE_200.equals(occupancyWrapper.getStatusCode()) && occupancyWrapper.getOccupancyRegionWrappers() != null) {
 						occupancyRegionResponses = occupancyWrapper.getOccupancyRegionWrappers().getOccupancyRegionResponses();
 					}
 					if (occupancyRegionResponses.length == 0) {
 						properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
-						return;
 					}
 					dateToBeDisplayed = yesterdayDate;
 				} else {
 					properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
-					return;
+					if (cachedTooManyRequestError.remove(secondRequest)) {
+						return false;
+					}
 				}
 			}
 			// Remove previous properties
@@ -1734,7 +1874,6 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			}
 			if (occupancyData.length == 0) {
 				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
-				return;
 			}
 			// Set to 8 by default if user haven't changed the hour value.
 			String hourValue = SembientAggregatorConstant.DEFAULT_WORK_HOUR;
@@ -1774,22 +1913,27 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			if (!properties.containsKey(SembientAggregatorConstant.PROPERTY_HOUR)) {
 				properties.put(SembientAggregatorConstant.PROPERTY_MESSAGE, SembientAggregatorConstant.NO_DATA);
 			}
+			if (cachedTooManyRequestError.remove(firstRequest)) {
+				return false;
+			}
 		}
+		return true;
 	}
 
 	/**
 	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
 	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
-	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between
+	 * attempts of retrieving needed information. This method retries up to 10 times with 500ms timeout in between to avoid the timeout exception
 	 *
 	 * @param url to retrieve data from
-	 * @return An instance of a input class
+	 * @return An instance of input class
 	 */
 	private <T> T doGetWithRetry(String url, Class<T> clazz) {
 		int retryAttempts = 0;
 		Exception lastError = null;
-
-		while (retryAttempts++ < SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
+		int retryIntervalInInt = getNumberOfRetryFromUserInput();
+		Long retryIntervalInLong = getRetryIntervalFromUserInput();
+		while (retryAttempts++ < retryIntervalInInt && serviceRunning) {
 			try {
 				return doGet(url, clazz);
 			} catch (CommandFailureException e) {
@@ -1799,6 +1943,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					// cycling this failed request until it's fixed. So we need to skip this scenario.
 					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
 					break;
+				} else {
+					logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
 				}
 			} catch (Exception e) {
 				lastError = e;
@@ -1809,16 +1955,47 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				break;
 			}
 			try {
-				TimeUnit.MILLISECONDS.sleep(getRetryIntervalFromUserInput());
+				TimeUnit.MILLISECONDS.sleep(retryIntervalInLong);
 			} catch (InterruptedException exception) {
 				//
 			}
 		}
 
-		if (retryAttempts == SembientAggregatorConstant.MAXIMUM_RETRY && serviceRunning) {
+		if (retryAttempts == retryIntervalInInt && serviceRunning) {
 			// if we got here, all 10 attempts failed
 			logger.error(String.format("Failed to retrieve %s data", url), lastError);
 		}
+		return null;
+	}
+
+	/**
+	 * If addressed too frequently, Sembient API may respond with 429 code, meaning that the call rate per second was reached.
+	 * Normally it would rarely happen due to the request rate limit, but when it does happen - adapter must retry the
+	 * attempts of retrieving needed information. This method cached the error request url for retry function
+	 *
+	 * @param url to retrieve data from
+	 * @return An instance of input class
+	 */
+	private <T> T doGetWithRetryForWorkerThread(String url, Class<T> clazz) {
+		try {
+			return doGet(url, clazz);
+		} catch (CommandFailureException e) {
+			if (e.getStatusCode() != 429) {
+				// Might be 401, 403 or any other error code here so the code will just get stuck
+				// cycling this failed request until it's fixed. So we need to skip this scenario.
+				logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
+				return null;
+			} else {
+				logger.error(String.format("Sembient API error %s while retrieving %s data", e.getStatusCode(), url), e);
+			}
+		} catch (Exception e) {
+			// if service is running, log error
+			if (serviceRunning) {
+				logger.error(String.format("Sembient API error while retrieving %s data", url), e);
+			}
+			return null;
+		}
+		cachedTooManyRequestError.add(url);
 		return null;
 	}
 
@@ -1876,21 +2053,45 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 
 	/**
 	 * Handle retry interval from user input
+	 *
 	 * @return retryInterval retry interval in long value
 	 */
 	private long getRetryIntervalFromUserInput() {
-		long retryIntervalInLong;
+		long retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
 		try {
-			retryIntervalInLong = Long.parseLong(getRetryInterval()) * 1000;
-			if (retryIntervalInLong < 0){
-				retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
-			}
-			if (retryIntervalInLong >= SembientAggregatorConstant.REST_COMMUNICATOR_TIMEOUT){
-				retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+			if (StringUtils.isNotNullOrEmpty(getRetryInterval())) {
+				retryIntervalInLong = Long.parseLong(getRetryInterval()) * 1000;
+				if (retryIntervalInLong <= 0) {
+					retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+				}
+				if (retryIntervalInLong >= SembientAggregatorConstant.REST_COMMUNICATOR_TIMEOUT) {
+					retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+				}
 			}
 		} catch (Exception e) {
-			retryIntervalInLong = SembientAggregatorConstant.DEFAULT_RETRY_INTERVAL;
+			logger.error(String.format("Invalid retry interval value: %s", getRetryInterval()));
 		}
 		return retryIntervalInLong;
+	}
+
+	/**
+	 * Handle number of retry from user input
+	 *
+	 * @return numberOfRetry number of retry in integer value
+	 */
+	private int getNumberOfRetryFromUserInput() {
+		int numberOfRetry = SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY;
+
+		try {
+			if (StringUtils.isNotNullOrEmpty(getNumberOfRetries())) {
+				numberOfRetry = Integer.parseInt(getNumberOfRetries());
+				if (numberOfRetry <= 0) {
+					numberOfRetry = SembientAggregatorConstant.DEFAULT_NUMBER_OF_RETRY;
+				}
+			}
+		} catch (Exception e) {
+			logger.error(String.format("Invalid number of retry value: %s", getNumberOfRetries()));
+		}
+		return numberOfRetry;
 	}
 }
