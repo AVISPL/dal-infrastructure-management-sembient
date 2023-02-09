@@ -377,6 +377,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	private Set<String> cachedTooManyRequestError = ConcurrentHashMap.newKeySet();
 
+	/**
+	 * Stored device category from api
+	 */
+	private Map<String, String> cachedRealDeviceCategory = new ConcurrentHashMap<>();
+
 
 	/**
 	 * Retrieves {@link #regionTypeFilter}
@@ -1280,6 +1285,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				sensorDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_SENSOR_MODEL);
 				sensorDevice.setDeviceOnline(true);
 				sensorDevice.setDeviceName(sensorName);
+				cachedRealDeviceCategory.put(deviceID, SembientAggregatorConstant.DEFAULT_SENSOR_CATEGORY);
 				Map<String, String> properties = new HashMap<>();
 				if (aggregatedDevices.get(deviceID) != null && !aggregatedDevices.get(deviceID).getProperties().isEmpty()) {
 					properties = aggregatedDevices.get(deviceID).getProperties();
@@ -1323,15 +1329,17 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			AggregatedDevice aggregatedDevice = new AggregatedDevice();
 			// Response doesn't contain any id, in order to make device id unique we create a combination of building, floor and region --
 			// For instance: BuildingA-Floor1-Region1
-			aggregatedDevice.setDeviceId(
+			String deviceID =
 					SembientAggregatorConstant.REGION + SembientAggregatorConstant.DASH + loginResponse.getCustomerId() + SembientAggregatorConstant.DASH + buildingID + SembientAggregatorConstant.DASH
-							+ floorName + SembientAggregatorConstant.DASH + region.getRegionName());
+							+ floorName + SembientAggregatorConstant.DASH + region.getRegionName();
+			aggregatedDevice.setDeviceId(deviceID);
 			aggregatedDevice.setType(SembientAggregatorConstant.DEFAULT_REGION_TYPE);
 			aggregatedDevice.setCategory(SembientAggregatorConstant.DEFAULT_REGION_CATEGORY);
 			aggregatedDevice.setDeviceMake(SembientAggregatorConstant.DEFAULT_REGION_MANUFACTURER);
 			aggregatedDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_REGION_MODEL);
 			aggregatedDevice.setDeviceOnline(true);
 			aggregatedDevice.setDeviceName(region.getRegionName());
+			cachedRealDeviceCategory.put(deviceID, SembientAggregatorConstant.REGION);
 			// occupancy, thermal, iaq data will be populated later on.
 			if (aggregatedDevices.get(aggregatedDevice.getDeviceId()) != null) {
 				Map<String, String> propertiesFromCached = aggregatedDevices.get(aggregatedDevice.getDeviceId()).getProperties();
@@ -1377,7 +1385,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		String floorName = rawBuildingInfo[lastIndex - 1];
 		int numberOfRetryInInt = getNumberOfRetryFromUserInput();
 		long retryIntervalInLong = getRetryIntervalFromUserInput();
-		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getCategory())) {
+		if (SembientAggregatorConstant.DEFAULT_SENSOR_CATEGORY.equals(cachedRealDeviceCategory.get(aggregatedDevice.getDeviceId()))) {
 			// Retrieve IAQ data
 			CompletableFuture<Boolean> iaqFuture = CompletableFuture.supplyAsync(() -> populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
 			// Retrieve thermal data
@@ -1575,6 +1583,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					}
 					if (airQualitySensorResponses.length == 0) {
 						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+						return true;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
@@ -1690,6 +1699,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 					}
 					if (thermalSensorResponse.length == 0) {
 						populateNoData(properties, SembientAggregatorConstant.THERMAL);
+						return true;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
