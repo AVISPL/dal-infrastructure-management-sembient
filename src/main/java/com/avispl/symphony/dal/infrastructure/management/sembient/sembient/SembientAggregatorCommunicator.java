@@ -1563,6 +1563,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
 	private boolean populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
+		boolean isPopulateForNoData = false;
 		String firstRequest =
 				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 						+ SembientAggregatorConstant.SLASH + currentDate;
@@ -1582,13 +1583,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
 					}
 					if (airQualitySensorResponses.length == 0) {
-						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
-						return true;
+						isPopulateForNoData = true;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
 							+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
-						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+						isPopulateForNoData = true;
 					}
 					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
@@ -1628,6 +1628,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			properties.remove(toTimeProperty);
 			properties.remove(recentDataProperty);
 			properties.remove(messageProperty);
+			if (isPopulateForNoData) {
+				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+			}
 
 			for (Map.Entry<String, AirQualityData[]> entry : sensorAndIAQMap.entrySet()) {
 				//
@@ -1678,6 +1681,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link ThermalWrapper}
 	 */
 	private boolean populateThermalData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
+		boolean isPopulateForNoData = false;
 		String firstRequest =
 				SembientAggregatorConstant.COMMAND_THERMAL_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 						+ SembientAggregatorConstant.SLASH + currentDate;
@@ -1698,12 +1702,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						thermalSensorResponse = thermalWrapper.getThermalSensorWrappers().getThermalSensorResponses();
 					}
 					if (thermalSensorResponse.length == 0) {
-						populateNoData(properties, SembientAggregatorConstant.THERMAL);
-						return true;
+						isPopulateForNoData = true;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
-						populateNoData(properties, SembientAggregatorConstant.THERMAL);
+						isPopulateForNoData = true;
 					}
 					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
@@ -1747,6 +1750,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			properties.remove(sensorToTimeProperty);
 			properties.remove(sensorRecentDataProperty);
 			properties.remove(sensorMessageProperty);
+			if (isPopulateForNoData) {
+				populateNoData(properties, SembientAggregatorConstant.THERMAL);
+			}
 			for (Map.Entry<String, ThermalData[]> entry : sensorAndThermalMap.entrySet()) {
 				ThermalData[] thermals = entry.getValue();
 				double averageThermal = Arrays.stream(thermals)
