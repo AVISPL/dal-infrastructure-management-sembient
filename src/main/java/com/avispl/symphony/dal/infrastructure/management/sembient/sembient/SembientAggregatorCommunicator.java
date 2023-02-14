@@ -377,6 +377,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 */
 	private Set<String> cachedTooManyRequestError = ConcurrentHashMap.newKeySet();
 
+	/**
+	 * Stored device category from api
+	 */
+	private Map<String, String> cachedRealDeviceCategory = new ConcurrentHashMap<>();
+
 
 	/**
 	 * Retrieves {@link #regionTypeFilter}
@@ -1280,6 +1285,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				sensorDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_SENSOR_MODEL);
 				sensorDevice.setDeviceOnline(true);
 				sensorDevice.setDeviceName(sensorName);
+				cachedRealDeviceCategory.put(deviceID, SembientAggregatorConstant.DEFAULT_SENSOR_CATEGORY);
 				Map<String, String> properties = new HashMap<>();
 				if (aggregatedDevices.get(deviceID) != null && !aggregatedDevices.get(deviceID).getProperties().isEmpty()) {
 					properties = aggregatedDevices.get(deviceID).getProperties();
@@ -1323,15 +1329,17 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			AggregatedDevice aggregatedDevice = new AggregatedDevice();
 			// Response doesn't contain any id, in order to make device id unique we create a combination of building, floor and region --
 			// For instance: BuildingA-Floor1-Region1
-			aggregatedDevice.setDeviceId(
+			String deviceID =
 					SembientAggregatorConstant.REGION + SembientAggregatorConstant.DASH + loginResponse.getCustomerId() + SembientAggregatorConstant.DASH + buildingID + SembientAggregatorConstant.DASH
-							+ floorName + SembientAggregatorConstant.DASH + region.getRegionName());
+							+ floorName + SembientAggregatorConstant.DASH + region.getRegionName();
+			aggregatedDevice.setDeviceId(deviceID);
 			aggregatedDevice.setType(SembientAggregatorConstant.DEFAULT_REGION_TYPE);
 			aggregatedDevice.setCategory(SembientAggregatorConstant.DEFAULT_REGION_CATEGORY);
 			aggregatedDevice.setDeviceMake(SembientAggregatorConstant.DEFAULT_REGION_MANUFACTURER);
 			aggregatedDevice.setDeviceModel(SembientAggregatorConstant.DEFAULT_REGION_MODEL);
 			aggregatedDevice.setDeviceOnline(true);
 			aggregatedDevice.setDeviceName(region.getRegionName());
+			cachedRealDeviceCategory.put(deviceID, SembientAggregatorConstant.REGION);
 			// occupancy, thermal, iaq data will be populated later on.
 			if (aggregatedDevices.get(aggregatedDevice.getDeviceId()) != null) {
 				Map<String, String> propertiesFromCached = aggregatedDevices.get(aggregatedDevice.getDeviceId()).getProperties();
@@ -1377,7 +1385,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 		String floorName = rawBuildingInfo[lastIndex - 1];
 		int numberOfRetryInInt = getNumberOfRetryFromUserInput();
 		long retryIntervalInLong = getRetryIntervalFromUserInput();
-		if (SembientAggregatorConstant.SENSOR.equals(aggregatedDevice.getCategory())) {
+		if (SembientAggregatorConstant.DEFAULT_SENSOR_CATEGORY.equals(cachedRealDeviceCategory.get(aggregatedDevice.getDeviceId()))) {
 			// Retrieve IAQ data
 			CompletableFuture<Boolean> iaqFuture = CompletableFuture.supplyAsync(() -> populateIAQData(properties, currentDate, yesterdayDate, buildingID, floorName, deviceName), executorService);
 			// Retrieve thermal data
@@ -1555,6 +1563,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link AirQualityWrapper}
 	 */
 	private boolean populateIAQData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
+		boolean isPopulateForNoData = false;
 		String firstRequest =
 				SembientAggregatorConstant.COMMAND_IAQ_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 						+ SembientAggregatorConstant.SLASH + currentDate;
@@ -1574,12 +1583,12 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						airQualitySensorResponses = airQualityWrapper.getAirQualitySensorWrapper().getAirQualitySensorResponses();
 					}
 					if (airQualitySensorResponses.length == 0) {
-						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+						isPopulateForNoData = true;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.AIR_QUALITY + SembientAggregatorConstant.HASH
 							+ SembientAggregatorConstant.CO2_VALUE_LATEST)) {
-						populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+						isPopulateForNoData = true;
 					}
 					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
@@ -1619,6 +1628,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			properties.remove(toTimeProperty);
 			properties.remove(recentDataProperty);
 			properties.remove(messageProperty);
+			if (isPopulateForNoData) {
+				populateNoData(properties, SembientAggregatorConstant.AIR_QUALITY);
+			}
 
 			for (Map.Entry<String, AirQualityData[]> entry : sensorAndIAQMap.entrySet()) {
 				//
@@ -1669,6 +1681,7 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 	 * @throws Exception if fail to get {@link ThermalWrapper}
 	 */
 	private boolean populateThermalData(Map<String, String> properties, String currentDate, String yesterdayDate, String buildingID, String floorName, String deviceName) {
+		boolean isPopulateForNoData = false;
 		String firstRequest =
 				SembientAggregatorConstant.COMMAND_THERMAL_TIMESERIES + loginResponse.getCustomerId() + SembientAggregatorConstant.SLASH + buildingID + SembientAggregatorConstant.SLASH + floorName
 						+ SembientAggregatorConstant.SLASH + currentDate;
@@ -1689,11 +1702,11 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 						thermalSensorResponse = thermalWrapper.getThermalSensorWrappers().getThermalSensorResponses();
 					}
 					if (thermalSensorResponse.length == 0) {
-						populateNoData(properties, SembientAggregatorConstant.THERMAL);
+						isPopulateForNoData = true;
 					}
 				} else {
 					if (!properties.containsKey(SembientAggregatorConstant.THERMAL + SembientAggregatorConstant.HASH + SembientAggregatorConstant.TEMPERATURE_LATEST_F)) {
-						populateNoData(properties, SembientAggregatorConstant.THERMAL);
+						isPopulateForNoData = true;
 					}
 					if (cachedTooManyRequestError.remove(secondRequest)) {
 						return false;
@@ -1737,6 +1750,9 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 			properties.remove(sensorToTimeProperty);
 			properties.remove(sensorRecentDataProperty);
 			properties.remove(sensorMessageProperty);
+			if (isPopulateForNoData) {
+				populateNoData(properties, SembientAggregatorConstant.THERMAL);
+			}
 			for (Map.Entry<String, ThermalData[]> entry : sensorAndThermalMap.entrySet()) {
 				ThermalData[] thermals = entry.getValue();
 				double averageThermal = Arrays.stream(thermals)
