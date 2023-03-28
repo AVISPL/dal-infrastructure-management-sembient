@@ -6,7 +6,7 @@
 
     <groupId>com.avispl.symphony.dal.infrastructure.management.sembient.sembient</groupId>
     <artifactId>symphony-dal-infrastructure-management-sembient-sembient</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
