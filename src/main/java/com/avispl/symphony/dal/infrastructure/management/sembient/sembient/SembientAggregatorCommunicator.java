@@ -1054,8 +1054,8 @@ public class SembientAggregatorCommunicator extends RestCommunicator implements 
 				loginResponse = loginWrapper.getLoginResponse();
 				loginResponse.setExpirationTime(currentTime + loginResponse.getExp() * 1000L);
 			} catch (Exception e) {
-				logger.error(String.format("An exception occur when trying to log in with username: %s, password: %s, error message: %s", this.getLogin(), this.getPassword(), e.getMessage()), e);
-				throw new FailedLoginException(String.format("Failed to login with username: %s, password: %s", this.getLogin(), this.getPassword()));
+				logger.error("An exception occur when trying to log in with error message " + e.getMessage(), e);
+				throw new FailedLoginException("Failed to login. Please check the credentials");
 			}
 		}
 	}
